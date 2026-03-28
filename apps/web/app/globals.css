@@ -102,7 +102,16 @@ input {
   }
 
   .text-field {
-    @apply mt-2 w-full rounded-[22px] border border-white/14 bg-white/6 px-4 py-3 text-base text-white outline-none placeholder:text-white/36 focus:border-white/35 focus:bg-white/[0.09];
+    @apply mt-2 w-full rounded-[22px] px-4 py-3 text-base text-white outline-none;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .text-field::placeholder {
+    color: rgba(255, 255, 255, 0.36);
+  }
+  .text-field:focus {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.09);
   }
 
   .action-button {
@@ -119,7 +128,8 @@ input {
   }
 
   .zen-nav-shell {
-    @apply rounded-[26px] border border-white/14 bg-black px-5 py-5 text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:px-8;
+    @apply rounded-[26px] bg-black px-5 py-5 text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:px-8;
+    border: 1px solid rgba(255, 255, 255, 0.14);
   }
 
   .zen-nav-pill {
