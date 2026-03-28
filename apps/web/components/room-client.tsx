@@ -121,8 +121,15 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
     return `${window.location.origin}/room/${roomId}?game=${game}`;
   }, [initialGame, roomId, snapshot?.game]);
 
+  const gameWrapperRef = useRef<HTMLDivElement>(null);
+
   const send = (type: string, payload: unknown) => {
     roomRef.current?.send(type, payload);
+  };
+
+  const startGame = () => {
+    gameWrapperRef.current?.requestFullscreen().catch(() => {});
+    send('room:startGame', {});
   };
 
   const addLocalPlayer = () => {
@@ -187,7 +194,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <button onClick={addLocalPlayer} className="rounded-full border-2 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
                   Add local player
                 </button>
-                <button onClick={() => send('room:startGame', {})} className="rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/10">
+                <button onClick={startGame} className="rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/10">
                   Start / restart
                 </button>
               </div>
@@ -210,7 +217,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
         {error ? <div className="rounded-[24px] border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-rose-900">{error}</div> : null}
 
         <section className="grid gap-6 xl:grid-cols-[1fr_340px]">
-          <div className="rounded-[34px] border border-black/10 bg-white/30 p-3 shadow-[0_24px_60px_rgba(25,18,53,0.12)] backdrop-blur-md sm:p-4">
+          <div ref={gameWrapperRef} className="rounded-[34px] border border-black/10 bg-white/30 p-3 shadow-[0_24px_60px_rgba(25,18,53,0.12)] backdrop-blur-md sm:p-4">
             {snapshot?.game === 'zatacka' ? (
               <ZatackaView snapshot={snapshot} onInput={(input: ZatackaControlInput) => send('zatacka:input', input)} />
             ) : snapshot?.game === 'ramses' ? (

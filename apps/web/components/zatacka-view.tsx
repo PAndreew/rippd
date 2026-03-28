@@ -18,17 +18,6 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
-  // Enter fullscreen when countdown phase begins
-  const prevPhaseRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!game) return;
-    const prev = prevPhaseRef.current;
-    prevPhaseRef.current = game.phase;
-    if (game.phase === 'countdown' && prev !== 'countdown' && !document.fullscreenElement) {
-      containerRef.current?.requestFullscreen().catch(() => {});
-    }
-  }, [game?.phase]);
-
   // Countdown timer
   useEffect(() => {
     if (game?.phase !== 'countdown') {

@@ -60,11 +60,11 @@ export function syncLobbyRiders(game: InternalZatackaGame, players: PlayerSeat[]
 function sampleCirclePositions(count: number, width: number, height: number) {
   const radius = Math.min(width, height) * 0.28;
   return Array.from({ length: count }, (_, index) => {
-    const angle = (Math.PI * 2 * index) / count;
+    const posAngle = (Math.PI * 2 * index) / count;
     return {
-      x: width / 2 + Math.cos(angle) * radius,
-      y: height / 2 + Math.sin(angle) * radius,
-      angle: wrapAngle(angle + Math.PI)
+      x: width / 2 + Math.cos(posAngle) * radius,
+      y: height / 2 + Math.sin(posAngle) * radius,
+      angle: Math.random() * Math.PI * 2
     };
   });
 }
