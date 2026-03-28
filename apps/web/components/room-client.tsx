@@ -184,10 +184,10 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <button onClick={copyInvite} className="rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
                   {copied ? 'Copied!' : 'Copy invite'}
                 </button>
-                <button onClick={addLocalPlayer} className="rounded-full border border-black/12 bg-white/72 px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-white">
+                <button onClick={addLocalPlayer} className="rounded-full border-2 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
                   Add local player
                 </button>
-                <button onClick={() => send('room:startGame', {})} className="rounded-full border border-black/12 bg-white/72 px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-white">
+                <button onClick={() => send('room:startGame', {})} className="rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/10">
                   Start / restart
                 </button>
               </div>
