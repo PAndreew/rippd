@@ -203,6 +203,15 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
           </button>
         )}
 
+        {/* Paused overlay */}
+        {game.paused && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: 'rgba(0,0,0,0.45)' }}>
+            <div style={{ fontSize: 'clamp(4rem,14vw,10rem)', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.06em', lineHeight: 1, textShadow: '0 0 40px rgba(255,255,255,0.3)' }}>
+              PAUSED
+            </div>
+          </div>
+        )}
+
         {/* Round-over overlay in fullscreen */}
         {isFullscreen && game.phase === 'round-over' && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

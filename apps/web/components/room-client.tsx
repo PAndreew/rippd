@@ -185,9 +185,9 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
               </div>
             </div>
 
-            <div className="rounded-[30px] bg-[#ece8ff] p-5 text-black">
+            <div id="room-quick-actions" className="rounded-[30px] bg-[#ece8ff] p-5 text-black">
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Quick actions</div>
-              <div className="mt-4 flex flex-wrap gap-3">
+              <div id="room-action-buttons" className="mt-4 flex flex-wrap gap-3">
                 <button onClick={copyInvite} className="rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
                   {copied ? 'Copied!' : 'Copy invite'}
                 </button>
@@ -197,18 +197,53 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <button onClick={startGame} className="rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/10">
                   Start / restart
                 </button>
+                {snapshot?.game === 'zatacka' && snapshot.gameState.type === 'zatacka' &&
+                  (snapshot.gameState.phase === 'running' || snapshot.gameState.phase === 'countdown') && (
+                  <button onClick={() => send('room:pauseGame', {})} className="rounded-full border-2 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
+                    {(snapshot.gameState as { paused?: boolean }).paused ? 'Resume' : 'Pause'}
+                  </button>
+                )}
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[24px] border border-black/10 bg-white/64 p-4">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Player identity</div>
-                  <div className="mt-2 text-xl font-black uppercase tracking-tight">{user?.displayName ?? nickname}</div>
-                  <div className="mt-1 text-sm text-black/58">{user ? 'Account-backed profile' : 'Guest profile for this room'}</div>
+              <div id="room-players" className="mt-5">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Players</div>
+                <div className="mt-3 space-y-2">
+                  {snapshot?.players.map((player) => {
+                    const isLocal = snapshot.viewer.localPlayerIds.includes(player.id);
+                    return (
+                      <div key={player.id} className="rounded-[20px] border border-black/10 bg-white/60 px-4 py-3 text-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 font-semibold text-black min-w-0">
+                            <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: player.color }} />
+                            {isLocal ? (
+                              <input
+                                key={player.id}
+                                defaultValue={player.name}
+                                maxLength={32}
+                                onBlur={(e) => {
+                                  const name = e.target.value.trim();
+                                  if (name && name !== player.name) send('room:renamePlayer', { playerId: player.id, name });
+                                  else e.target.value = player.name;
+                                }}
+                                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                                className="min-w-0 flex-1 bg-transparent outline-none border-b border-black/20 focus:border-black/60 text-black font-semibold"
+                              />
+                            ) : (
+                              <span>{player.name}</span>
+                            )}
+                          </div>
+                          <span className="text-xs uppercase tracking-[0.18em] text-black/40 shrink-0">{player.controlPreset}</span>
+                        </div>
+                        <div className="mt-1 text-black/50">{isLocal ? 'This device · tap name to rename' : 'Remote player'}</div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="rounded-[24px] border border-black/10 bg-white/64 p-4">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Reconnect</div>
-                  <div className="mt-2 text-sm text-black/58">This browser stores a reconnect token locally, so refreshing should reclaim your local seats during the reconnect window.</div>
-                </div>
+              </div>
+
+              <div id="room-invite" className="mt-5">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Invite link</div>
+                <div className="mt-2 break-all text-sm text-black/55">{shareUrl}</div>
               </div>
             </div>
           </div>
@@ -216,8 +251,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
 
         {error ? <div className="rounded-[24px] border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-rose-900">{error}</div> : null}
 
-        <section className="grid gap-6 xl:grid-cols-[1fr_340px]">
-          <div ref={gameWrapperRef} className="rounded-[34px] border border-black/10 bg-white/30 p-3 shadow-[0_24px_60px_rgba(25,18,53,0.12)] backdrop-blur-md sm:p-4">
+        <section id="room-game-section" className="grid gap-6 xl:grid-cols-[1fr_260px]">
+          <div id="room-game-board" ref={gameWrapperRef} className="rounded-[34px] border border-black/10 bg-white/30 p-3 shadow-[0_24px_60px_rgba(25,18,53,0.12)] backdrop-blur-md sm:p-4">
             {snapshot?.game === 'zatacka' ? (
               <ZatackaView snapshot={snapshot} onInput={(input: ZatackaControlInput) => send('zatacka:input', input)} />
             ) : snapshot?.game === 'ramses' ? (
@@ -225,44 +260,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
             ) : null}
           </div>
 
-          <aside className="space-y-4 rounded-[34px] border border-black/10 bg-black p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
-            <div>
-              <div className="eyebrow !text-white/40">Players</div>
-              <div className="mt-3 space-y-2">
-                {snapshot?.players.map((player) => {
-                  const isLocal = snapshot.viewer.localPlayerIds.includes(player.id);
-                  return (
-                    <div key={player.id} className="rounded-[24px] border border-white/10 bg-white/6 px-4 py-4 text-sm">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 font-semibold text-white min-w-0">
-                          <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: player.color }} />
-                          {isLocal ? (
-                            <input
-                              key={player.id}
-                              defaultValue={player.name}
-                              maxLength={32}
-                              onBlur={(e) => {
-                                const name = e.target.value.trim();
-                                if (name && name !== player.name) send('room:renamePlayer', { playerId: player.id, name });
-                                else e.target.value = player.name;
-                              }}
-                              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                              className="min-w-0 flex-1 bg-transparent outline-none border-b border-white/20 focus:border-white/60 text-white font-semibold"
-                            />
-                          ) : (
-                            <span>{player.name}</span>
-                          )}
-                        </div>
-                        <span className="text-xs uppercase tracking-[0.18em] text-white/38 shrink-0">{player.controlPreset}</span>
-                      </div>
-                      <div className="mt-1 text-white/52">{isLocal ? 'This device · tap name to rename' : 'Remote player'}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
+          <aside id="room-sidebar" className="rounded-[34px] border border-black/10 bg-black p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
+            <div id="room-controls" className="rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
               <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Controls</div>
               <ul className="space-y-1">
                 <li>Arrows: left / right</li>
@@ -270,11 +269,6 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <li>TFGH: F / H</li>
                 <li>IJKL: J / L</li>
               </ul>
-            </div>
-
-            <div className="rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
-              <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Invite link</div>
-              <div className="break-all text-white/55">{shareUrl}</div>
             </div>
           </aside>
         </section>

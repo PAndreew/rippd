@@ -124,6 +124,7 @@ export type ZatackaSnapshot = {
   trails: ZatackaTrail[];
   winnerId?: string;
   countdownEndsAt?: number;
+  paused: boolean;
 };
 
 export type RamsesCell = {

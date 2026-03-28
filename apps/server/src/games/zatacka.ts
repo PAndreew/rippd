@@ -25,6 +25,7 @@ export type InternalZatackaGame = {
   restartAt?: number;
   startedAt?: number;
   countdownEndsAt?: number;
+  paused: boolean;
 };
 
 const TRAIL_CAP = 500;
@@ -42,7 +43,8 @@ export function createZatackaGame(): InternalZatackaGame {
     width: 960,
     height: 600,
     round: 0,
-    riders: []
+    riders: [],
+    paused: false
   };
 }
 
@@ -94,6 +96,7 @@ function hitsTrail(x: number, y: number, riders: InternalZatackaRider[], selfId:
 export function startZatacka(roomCode: string, game: InternalZatackaGame, players: PlayerSeat[]) {
   const positions = sampleCirclePositions(players.length || 1, game.width, game.height);
   game.phase = 'countdown';
+  game.paused = false;
   game.round += 1;
   game.winnerId = undefined;
   game.restartAt = undefined;
@@ -118,6 +121,8 @@ export function startZatacka(roomCode: string, game: InternalZatackaGame, player
 }
 
 export async function tickZatacka(roomCode: string, game: InternalZatackaGame, playerCount: number) {
+  if (game.paused) return true;
+
   if (game.phase === 'countdown') {
     if (Date.now() >= (game.countdownEndsAt ?? 0)) {
       game.phase = 'running';
@@ -205,6 +210,7 @@ export function buildZatackaSnapshot(game: InternalZatackaGame): ZatackaSnapshot
       points: rider.trail
     })),
     winnerId: game.winnerId,
-    countdownEndsAt: game.countdownEndsAt
+    countdownEndsAt: game.countdownEndsAt,
+    paused: game.paused
   };
 }
