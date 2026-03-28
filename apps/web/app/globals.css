@@ -3,32 +3,46 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
-  --page-bg: #050816;
-  --page-bg-soft: #0c1533;
-  --page-text: #f8fafc;
-  --page-text-muted: rgba(248, 250, 252, 0.68);
-  --page-border: rgba(255, 255, 255, 0.12);
-  --panel-bg: rgba(12, 21, 51, 0.72);
-  --panel-bg-strong: rgba(8, 17, 31, 0.92);
-  --panel-light: rgba(255, 255, 255, 0.06);
-  --brand-accent: #6ee7b7;
-  --brand-accent-strong: #34d399;
+  color-scheme: light;
+  --page-bg: #d8d4ee;
+  --page-bg-soft: #e5e2f6;
+  --page-bg-deep: #c9c3ea;
+  --page-text: #040404;
+  --page-text-muted: rgba(4, 4, 4, 0.66);
+  --page-border: rgba(4, 4, 4, 0.16);
+  --panel-bg: rgba(255, 255, 255, 0.34);
+  --panel-bg-strong: #080808;
+  --panel-light: rgba(255, 255, 255, 0.65);
+  --brand-accent: #ece9ff;
+  --brand-accent-strong: #d6cffc;
   --brand-warning: #f59e0b;
-  --radius-card: 28px;
+  --radius-card: 34px;
   --radius-pill: 999px;
-  --shadow-soft: 0 20px 60px rgba(0, 0, 0, 0.35);
-  --shadow-strong: 0 28px 80px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 24px 60px rgba(25, 18, 53, 0.14);
+  --shadow-strong: 0 30px 80px rgba(11, 8, 23, 0.24);
 }
 
 html {
   background:
-    radial-gradient(circle at top, rgba(110, 231, 183, 0.12), transparent 28%),
-    linear-gradient(180deg, #0a1127 0%, #050816 42%, #020617 100%);
+    radial-gradient(circle at top center, rgba(123, 92, 255, 0.12), transparent 26%),
+    linear-gradient(180deg, #d9d6ee 0%, #d7d3ee 45%, #d5d1ec 100%);
 }
 
 body {
-  @apply min-h-screen bg-transparent text-slate-50 antialiased;
+  font-family: 'IBM Plex Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  @apply min-h-screen bg-transparent text-black antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.eyebrow,
+.heading-font,
+.display-font {
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', 'Helvetica Neue', Arial, sans-serif;
 }
 
 button,
@@ -38,37 +52,40 @@ input {
 
 @layer components {
   .page-shell {
-    @apply min-h-screen bg-transparent text-slate-50;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top right, rgba(111, 82, 255, 0.12), transparent 18%),
+      linear-gradient(180deg, #d9d6ee 0%, #d7d3ee 100%);
+    @apply text-black;
   }
 
   .shell-width {
-    @apply mx-auto w-full max-w-7xl px-6;
+    @apply mx-auto w-full max-w-[1260px] px-4 sm:px-6 lg:px-8;
   }
 
   .surface-panel {
-    background: var(--panel-bg);
-    border: 1px solid var(--page-border);
+    background: rgba(255, 255, 255, 0.42);
+    border: 1px solid rgba(10, 10, 10, 0.12);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-soft);
-    @apply backdrop-blur-xl;
+    @apply backdrop-blur-md;
   }
 
   .surface-panel-strong {
-    background: var(--panel-bg-strong);
-    border: 1px solid var(--page-border);
+    background: #0a0a0a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-strong);
-    @apply backdrop-blur-xl;
   }
 
   .surface-tile {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.48);
+    border: 1px solid rgba(10, 10, 10, 0.12);
+    border-radius: 28px;
   }
 
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.28em] text-white/45;
+    @apply text-[11px] uppercase tracking-[0.28em] text-black/45;
   }
 
   .muted-copy {
@@ -77,7 +94,7 @@ input {
 
   .pill-badge {
     border-radius: var(--radius-pill);
-    @apply inline-flex items-center gap-2 border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em];
+    @apply inline-flex items-center gap-2 border px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em];
   }
 
   .field-label {
@@ -85,19 +102,99 @@ input {
   }
 
   .text-field {
-    @apply mt-2 w-full rounded-[20px] border border-white/15 bg-white/5 px-4 py-3 text-base text-white outline-none placeholder:text-white/30 focus:border-white/35 focus:bg-white/[0.07];
+    @apply mt-2 w-full rounded-[22px] border border-white/14 bg-white/6 px-4 py-3 text-base text-white outline-none placeholder:text-white/36 focus:border-white/35 focus:bg-white/[0.09];
   }
 
   .action-button {
-    @apply inline-flex items-center justify-center gap-2 bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-950 hover:bg-slate-100;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-black px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-white hover:bg-black/85;
   }
 
   .action-button-dark {
-    @apply inline-flex items-center justify-center gap-2 border border-white/15 bg-white/5 px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white hover:border-white/35 hover:bg-white/10;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-black/15 bg-black px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-white hover:bg-black/85;
   }
 
   .action-button-accent {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-950 hover:opacity-90;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-black hover:opacity-90;
     background: var(--brand-accent);
+  }
+
+  .zen-nav-shell {
+    @apply rounded-[26px] border border-white/14 bg-black px-5 py-5 text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:px-8;
+  }
+
+  .zen-nav-pill {
+    @apply inline-flex items-center gap-3 rounded-full bg-[#efebff] px-6 py-3 text-sm font-black uppercase tracking-[0.08em] text-black sm:px-10 sm:py-4 sm:text-[1.1rem];
+  }
+
+  .zen-burger {
+    @apply flex h-12 w-12 items-center justify-center rounded-full text-white sm:h-14 sm:w-14;
+  }
+
+  .zen-section {
+    @apply py-10 sm:py-14 lg:py-20;
+  }
+
+  .zen-visual {
+    position: relative;
+    overflow: hidden;
+    border-radius: 34px;
+    min-height: 340px;
+    background:
+      radial-gradient(circle at 65% 18%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 18%),
+      radial-gradient(circle at 60% 26%, rgba(206, 149, 255, 0.9), rgba(206, 149, 255, 0) 18%),
+      radial-gradient(circle at 12% 85%, rgba(102, 153, 255, 0.9), rgba(102, 153, 255, 0) 20%),
+      linear-gradient(135deg, #150032 5%, #1d0a67 32%, #5e45c7 62%, #81b8ff 100%);
+    box-shadow: 0 26px 70px rgba(30, 18, 68, 0.18);
+  }
+
+  .zen-visual::before,
+  .zen-visual::after {
+    content: '';
+    position: absolute;
+    inset: auto;
+    display: block;
+  }
+
+  .zen-visual::before {
+    width: 48%;
+    height: 88%;
+    right: 8%;
+    top: 6%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(225,222,255,0.86) 34%, rgba(107,153,255,0.56) 100%);
+    clip-path: polygon(34% 0%, 70% 7%, 98% 34%, 94% 86%, 72% 100%, 26% 95%, 0% 72%, 8% 18%);
+    filter: blur(1px);
+    opacity: 0.96;
+  }
+
+  .zen-visual::after {
+    width: 44%;
+    height: 92%;
+    left: 16%;
+    top: 10%;
+    background: linear-gradient(180deg, rgba(35,32,126,0.9) 0%, rgba(27,34,122,0.98) 34%, rgba(14,18,78,0.95) 100%);
+    clip-path: polygon(28% 0%, 79% 18%, 91% 58%, 78% 100%, 31% 96%, 12% 66%, 0 26%);
+    opacity: 0.94;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.04);
+  }
+
+  .zen-display-title {
+    line-height: 0.9;
+    letter-spacing: -0.06em;
+    text-transform: uppercase;
+    @apply display-font font-black text-black;
+  }
+
+  .zen-display-title span {
+    display: block;
+  }
+
+  .zen-outline-card {
+    @apply rounded-[30px] border border-black/10 bg-white/35 p-5 backdrop-blur-md;
+  }
+
+  .zen-room-stage {
+    background:
+      radial-gradient(circle at top center, rgba(114, 79, 255, 0.16), transparent 22%),
+      linear-gradient(180deg, #d7d3ee 0%, #d4d0eb 100%);
   }
 }

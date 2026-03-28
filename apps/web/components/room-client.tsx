@@ -13,7 +13,7 @@ import {
 } from '@rippd/shared';
 import { ZatackaView } from '@/components/zatacka-view';
 import { RamsesView } from '@/components/ramses-view';
-import { CATEGORY_BADGE_TONES } from '@/lib/design';
+import { CATEGORY_BADGE_TONES_LIGHT } from '@/lib/design';
 import { fetchCurrentUser, type AuthUser } from '@/lib/auth';
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'ws://localhost:3001';
@@ -140,7 +140,14 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
   };
 
   if (joining && !snapshot) {
-    return <main className="page-shell flex min-h-screen items-center justify-center px-6 text-center text-xl text-white/80">Connecting to room {roomId}…</main>;
+    return (
+      <main className="zen-room-stage flex min-h-screen items-center justify-center px-6 text-center">
+        <div>
+          <div className="eyebrow">Connecting</div>
+          <div className="mt-4 display-font text-6xl font-black uppercase tracking-[-0.06em]">Room {roomId}</div>
+        </div>
+      </main>
+    );
   }
 
   const activeGame = snapshot?.game ?? ((initialGame as GameKind | undefined) ?? 'zatacka');
@@ -148,56 +155,61 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
   const gameName = snapshot ? GAME_CONFIG[snapshot.game].name : GAME_CONFIG[activeGame].name;
 
   return (
-    <main className="page-shell px-4 py-6 sm:px-6">
+    <main className="zen-room-stage min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="shell-width flex flex-col gap-6 px-0">
-        <header className="surface-panel-strong overflow-hidden">
-          <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(110,231,183,0.18),transparent_30%),linear-gradient(180deg,#091229_0%,#050816_100%)] px-6 py-6 lg:border-b-0 lg:border-r lg:border-white/10 lg:px-8 lg:py-8">
-              <div className="eyebrow">Room {snapshot?.roomId ?? roomId}</div>
-              <h1 className="mt-3 text-4xl font-black text-white sm:text-5xl">{gameName}</h1>
-              <p className="mt-3 max-w-2xl text-base text-white/60">Invite people with the room code, drop in locally for couch co-op, and keep everyone in sync with the same visual language as the landing page.</p>
+        <header className="zen-nav-shell overflow-hidden">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+            <div>
+              <div className="eyebrow !text-white/40">Room {snapshot?.roomId ?? roomId}</div>
+              <div className="mt-5 display-font text-[clamp(3.7rem,8vw,7rem)] font-black uppercase leading-[0.88] tracking-[-0.06em] text-white">
+                {gameName}
+              </div>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/64 sm:text-base">
+                Invite people with the room code, add local players for couch co-op, and manage the match with the same bold visual language as the refreshed landing page.
+              </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 {theme.badgeClasses.map((badge, index) => (
-                  <RoomBadge key={badge} tone={CATEGORY_BADGE_TONES[index % CATEGORY_BADGE_TONES.length]}>
+                  <RoomBadge key={badge} tone={CATEGORY_BADGE_TONES_LIGHT[index % CATEGORY_BADGE_TONES_LIGHT.length]}>
                     {badge}
                   </RoomBadge>
                 ))}
-                {user ? <RoomBadge tone="border-white/20 bg-white/10 text-white">Signed in</RoomBadge> : <RoomBadge tone="border-white/20 bg-white/10 text-white">Guest mode</RoomBadge>}
+                {user ? <RoomBadge tone="border-white/14 bg-white/8 text-white">Signed in</RoomBadge> : <RoomBadge tone="border-white/14 bg-white/8 text-white">Guest mode</RoomBadge>}
               </div>
             </div>
 
-            <div className="bg-white px-6 py-6 text-slate-950 lg:px-8 lg:py-8">
-              <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Quick actions</div>
+            <div className="rounded-[30px] bg-[#ece8ff] p-5 text-black">
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Quick actions</div>
               <div className="mt-4 flex flex-wrap gap-3">
-                <button onClick={copyInvite} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-bold hover:border-slate-950 hover:text-slate-950">
+                <button onClick={copyInvite} className="rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
                   {copied ? 'Copied!' : 'Copy invite'}
                 </button>
-                <button onClick={addLocalPlayer} className="rounded-full bg-emerald-300 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-emerald-200">
+                <button onClick={addLocalPlayer} className="rounded-full border border-black/12 bg-white/72 px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-white">
                   Add local player
                 </button>
-                <button onClick={() => send('room:startGame', {})} className="rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 hover:bg-amber-100">
+                <button onClick={() => send('room:startGame', {})} className="rounded-full border border-black/12 bg-white/72 px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-white">
                   Start / restart
                 </button>
               </div>
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[22px] border border-slate-200 p-4">
-                  <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Player identity</div>
-                  <div className="mt-2 text-lg font-black">{user?.displayName ?? nickname}</div>
-                  <div className="mt-1 text-sm text-slate-500">{user ? 'Account-backed profile' : 'Guest profile for this room'}</div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[24px] border border-black/10 bg-white/64 p-4">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Player identity</div>
+                  <div className="mt-2 text-xl font-black uppercase tracking-tight">{user?.displayName ?? nickname}</div>
+                  <div className="mt-1 text-sm text-black/58">{user ? 'Account-backed profile' : 'Guest profile for this room'}</div>
                 </div>
-                <div className="rounded-[22px] border border-slate-200 p-4">
-                  <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Reconnect</div>
-                  <div className="mt-2 text-sm text-slate-600">This browser stores a reconnect token locally, so refreshing should reclaim your local seats during the reconnect window.</div>
+                <div className="rounded-[24px] border border-black/10 bg-white/64 p-4">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Reconnect</div>
+                  <div className="mt-2 text-sm text-black/58">This browser stores a reconnect token locally, so refreshing should reclaim your local seats during the reconnect window.</div>
                 </div>
               </div>
             </div>
           </div>
         </header>
 
-        {error ? <div className="rounded-[22px] border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-rose-100">{error}</div> : null}
+        {error ? <div className="rounded-[24px] border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-rose-900">{error}</div> : null}
 
-        <section className="grid gap-6 xl:grid-cols-[1fr_320px]">
-          <div className="surface-panel p-3 sm:p-4">
+        <section className="grid gap-6 xl:grid-cols-[1fr_340px]">
+          <div className="rounded-[34px] border border-black/10 bg-white/30 p-3 shadow-[0_24px_60px_rgba(25,18,53,0.12)] backdrop-blur-md sm:p-4">
             {snapshot?.game === 'zatacka' ? (
               <ZatackaView snapshot={snapshot} onInput={(input: ZatackaControlInput) => send('zatacka:input', input)} />
             ) : snapshot?.game === 'ramses' ? (
@@ -205,27 +217,27 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
             ) : null}
           </div>
 
-          <aside className="surface-panel space-y-4 p-5">
+          <aside className="space-y-4 rounded-[34px] border border-black/10 bg-black p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
             <div>
-              <div className="eyebrow">Players</div>
+              <div className="eyebrow !text-white/40">Players</div>
               <div className="mt-3 space-y-2">
                 {snapshot?.players.map((player) => (
-                  <div key={player.id} className="surface-tile px-3 py-3 text-sm">
+                  <div key={player.id} className="rounded-[24px] border border-white/10 bg-white/6 px-4 py-4 text-sm">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 font-semibold text-white">
                         <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: player.color }} />
                         {player.name}
                       </div>
-                      <span className="text-xs uppercase tracking-[0.18em] text-white/35">{player.controlPreset}</span>
+                      <span className="text-xs uppercase tracking-[0.18em] text-white/38">{player.controlPreset}</span>
                     </div>
-                    <div className="mt-1 text-white/50">{player.socketId === snapshot.viewer.socketId ? 'This device' : 'Remote player'}</div>
+                    <div className="mt-1 text-white/52">{player.socketId === snapshot.viewer.socketId ? 'This device' : 'Remote player'}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="surface-tile p-4 text-sm text-white/70">
-              <div className="mb-2 text-base font-bold text-white">Controls</div>
+            <div className="rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
+              <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Controls</div>
               <ul className="space-y-1">
                 <li>Arrows: left / right</li>
                 <li>WASD: A / D</li>
@@ -234,8 +246,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
               </ul>
             </div>
 
-            <div className="surface-tile p-4 text-sm text-white/70">
-              <div className="mb-2 text-base font-bold text-white">Invite link</div>
+            <div className="rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
+              <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Invite link</div>
               <div className="break-all text-white/55">{shareUrl}</div>
             </div>
           </aside>
