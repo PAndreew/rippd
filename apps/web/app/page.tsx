@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { GAME_CONFIG, GAME_THEME, GameKind } from '@rippd/shared';
-import { CATEGORY_BADGE_TONES } from '@/lib/design';
+import { CATEGORY_BADGE_TONES, CATEGORY_BADGE_TONES_LIGHT } from '@/lib/design';
 import {
   AuthUser,
   clearStoredAuthToken,
@@ -313,11 +313,14 @@ function GameSection({ game, index, onPlay }: { game: (typeof GAME_CONFIG)[GameK
             <h2 className={`mt-3 text-5xl font-black tracking-tight sm:text-6xl lg:text-7xl ${textColor}`}>{game.name}</h2>
             <p className={`mt-5 max-w-xl text-lg leading-relaxed ${mutedColor}`}>{game.description}</p>
             <div className="mt-7 flex flex-wrap gap-2">
-              {theme.badgeClasses.map((badge, badgeIndex) => (
-                <CategoryBadge key={badge} tone={CATEGORY_BADGE_TONES[badgeIndex % CATEGORY_BADGE_TONES.length]}>
-                  {badge}
-                </CategoryBadge>
-              ))}
+              {theme.badgeClasses.map((badge, badgeIndex) => {
+                const tones = isDark ? CATEGORY_BADGE_TONES : CATEGORY_BADGE_TONES_LIGHT;
+                return (
+                  <CategoryBadge key={badge} tone={tones[badgeIndex % tones.length]}>
+                    {badge}
+                  </CategoryBadge>
+                );
+              })}
             </div>
             <ZigzagButton onClick={onPlay} className={`mt-8 px-8 py-5 text-sm font-black uppercase tracking-[0.18em] ${isDark ? 'bg-white text-slate-950 hover:bg-slate-100' : 'bg-slate-950 text-white hover:bg-slate-800'}`}>
               Play →

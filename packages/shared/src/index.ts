@@ -4,13 +4,13 @@ export type ControlPreset = 'arrows' | 'wasd' | 'tfgh' | 'ijkl';
 export const GAME_CONFIG = {
   zatacka: {
     kind: 'zatacka' as const,
-    name: 'Zatacka',
+    name: 'Slither',
     tagline: 'Last rider standing',
     description: 'Fast turn-and-burn trail duels with couch co-op keyboard presets and online rooms.'
   },
   ramses: {
     kind: 'ramses' as const,
-    name: 'Ramses Clone',
+    name: 'Treasure Hunt',
     tagline: 'Treasure maze with moving pyramids',
     description: 'Slide square pyramids, reveal coloured treasures, and path your pawn to the matching card.'
   }
