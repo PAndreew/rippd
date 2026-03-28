@@ -4,9 +4,9 @@
 
 :root {
   color-scheme: light;
-  --page-bg: #d8d4ee;
-  --page-bg-soft: #e5e2f6;
-  --page-bg-deep: #c9c3ea;
+  --page-bg: #ffffff;
+  --page-bg-soft: #f5f5f5;
+  --page-bg-deep: #ebebeb;
   --page-text: #040404;
   --page-text-muted: rgba(4, 4, 4, 0.66);
   --page-border: rgba(4, 4, 4, 0.16);
@@ -23,9 +23,7 @@
 }
 
 html {
-  background:
-    radial-gradient(circle at top center, rgba(123, 92, 255, 0.12), transparent 26%),
-    linear-gradient(180deg, #d9d6ee 0%, #d7d3ee 45%, #d5d1ec 100%);
+  background: #ffffff;
 }
 
 body {
@@ -53,9 +51,7 @@ input {
 @layer components {
   .page-shell {
     min-height: 100vh;
-    background:
-      radial-gradient(circle at top right, rgba(111, 82, 255, 0.12), transparent 18%),
-      linear-gradient(180deg, #d9d6ee 0%, #d7d3ee 100%);
+    background: #ffffff;
     @apply text-black;
   }
 
