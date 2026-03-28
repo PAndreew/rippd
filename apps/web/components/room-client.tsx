@@ -14,7 +14,7 @@ import {
 import { ZatackaView } from '@/components/zatacka-view';
 import { RamsesView } from '@/components/ramses-view';
 import { CATEGORY_BADGE_TONES_LIGHT } from '@/lib/design';
-import { fetchCurrentUser, type AuthUser } from '@/lib/auth';
+import { fetchCurrentUser, getStoredAuthToken, type AuthUser } from '@/lib/auth';
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'ws://localhost:3001';
 const presets: ControlPreset[] = ['arrows', 'wasd', 'tfgh', 'ijkl'];
@@ -44,6 +44,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
   const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
+    if (!getStoredAuthToken()) return;
     fetchCurrentUser()
       .then((result) => setUser(result.user))
       .catch(() => setUser(null));
@@ -221,18 +222,36 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
             <div>
               <div className="eyebrow !text-white/40">Players</div>
               <div className="mt-3 space-y-2">
-                {snapshot?.players.map((player) => (
-                  <div key={player.id} className="rounded-[24px] border border-white/10 bg-white/6 px-4 py-4 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 font-semibold text-white">
-                        <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: player.color }} />
-                        {player.name}
+                {snapshot?.players.map((player) => {
+                  const isLocal = snapshot.viewer.localPlayerIds.includes(player.id);
+                  return (
+                    <div key={player.id} className="rounded-[24px] border border-white/10 bg-white/6 px-4 py-4 text-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 font-semibold text-white min-w-0">
+                          <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: player.color }} />
+                          {isLocal ? (
+                            <input
+                              key={player.id}
+                              defaultValue={player.name}
+                              maxLength={32}
+                              onBlur={(e) => {
+                                const name = e.target.value.trim();
+                                if (name && name !== player.name) send('room:renamePlayer', { playerId: player.id, name });
+                                else e.target.value = player.name;
+                              }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                              className="min-w-0 flex-1 bg-transparent outline-none border-b border-white/20 focus:border-white/60 text-white font-semibold"
+                            />
+                          ) : (
+                            <span>{player.name}</span>
+                          )}
+                        </div>
+                        <span className="text-xs uppercase tracking-[0.18em] text-white/38 shrink-0">{player.controlPreset}</span>
                       </div>
-                      <span className="text-xs uppercase tracking-[0.18em] text-white/38">{player.controlPreset}</span>
+                      <div className="mt-1 text-white/52">{isLocal ? 'This device · tap name to rename' : 'Remote player'}</div>
                     </div>
-                    <div className="mt-1 text-white/52">{player.socketId === snapshot.viewer.socketId ? 'This device' : 'Remote player'}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

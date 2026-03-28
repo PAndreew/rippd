@@ -65,6 +65,21 @@ export class RippdRoom extends Room {
       this.broadcastSnapshot();
     });
 
+    this.onMessage('room:renamePlayer', (client, payload: { playerId: string; name: string }) => {
+      const ownsPlayer = (this.sessionLocalPlayers.get(client.sessionId) ?? []).includes(payload.playerId);
+      if (!ownsPlayer) return;
+      const player = this.players.find((p) => p.id === payload.playerId);
+      if (!player) return;
+      const name = String(payload.name ?? '').trim().slice(0, 32);
+      if (!name) return;
+      player.name = name;
+      if (this.gameState.type === 'zatacka') {
+        const rider = this.gameState.riders.find((r) => r.id === payload.playerId);
+        if (rider) rider.name = name;
+      }
+      this.broadcastSnapshot();
+    });
+
     this.onMessage('zatacka:input', (client, payload: ZatackaControlInput) => {
       if (this.game !== 'zatacka' || this.gameState.type !== 'zatacka') return;
       const ownsPlayer = (this.sessionLocalPlayers.get(client.sessionId) ?? []).includes(payload.playerId);

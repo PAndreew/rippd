@@ -116,13 +116,14 @@ export type ZatackaTrail = {
 
 export type ZatackaSnapshot = {
   type: 'zatacka';
-  phase: 'lobby' | 'running' | 'round-over';
+  phase: 'lobby' | 'countdown' | 'running' | 'round-over';
   width: number;
   height: number;
   round: number;
   riders: ZatackaRiderState[];
   trails: ZatackaTrail[];
   winnerId?: string;
+  countdownEndsAt?: number;
 };
 
 export type RamsesCell = {

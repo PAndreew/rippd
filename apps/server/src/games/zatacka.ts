@@ -16,7 +16,7 @@ export type InternalZatackaRider = {
 
 export type InternalZatackaGame = {
   type: 'zatacka';
-  phase: 'lobby' | 'running' | 'round-over';
+  phase: 'lobby' | 'countdown' | 'running' | 'round-over';
   width: number;
   height: number;
   round: number;
@@ -25,7 +25,10 @@ export type InternalZatackaGame = {
   winnerId?: string;
   restartAt?: number;
   startedAt?: number;
+  countdownEndsAt?: number;
 };
+
+const TRAIL_CAP = 500;
 
 export function createZatackaGame(): InternalZatackaGame {
   return {
@@ -72,15 +75,16 @@ function toTrailKey(x: number, y: number) {
 
 export function startZatacka(roomCode: string, game: InternalZatackaGame, players: PlayerSeat[]) {
   const positions = sampleCirclePositions(players.length || 1, game.width, game.height);
-  game.phase = 'running';
+  game.phase = 'countdown';
   game.round += 1;
   game.winnerId = undefined;
   game.occupied = new Set<string>();
   game.restartAt = undefined;
-  game.startedAt = Date.now();
+  game.startedAt = undefined;
+  game.countdownEndsAt = Date.now() + 3000;
   game.riders = players.map((player, index) => {
     const start = positions[index];
-    const rider: InternalZatackaRider = {
+    return {
       id: player.id,
       name: player.name,
       color: player.color,
@@ -90,16 +94,33 @@ export function startZatacka(roomCode: string, game: InternalZatackaGame, player
       steering: 0,
       speed: 3.6,
       alive: true,
-      trail: [{ x: start.x, y: start.y }]
+      trail: []
     };
-    game.occupied.add(toTrailKey(start.x, start.y));
-    return rider;
   });
   void recordRoomEvent({ roomId: roomCode, gameKind: 'zatacka', eventType: 'match_started', payload: { players: players.length, round: game.round } });
 }
 
 export async function tickZatacka(roomCode: string, game: InternalZatackaGame, playerCount: number) {
+  if (game.phase === 'countdown') {
+    if (Date.now() >= (game.countdownEndsAt ?? 0)) {
+      game.phase = 'running';
+      game.startedAt = Date.now();
+      game.riders.forEach((rider) => {
+        rider.trail = [{ x: rider.position.x, y: rider.position.y }];
+      });
+    }
+    return true;
+  }
+
   if (game.phase !== 'running') return false;
+
+  // Rebuild occupied from current trails so collision always matches what is visible
+  game.occupied = new Set<string>();
+  for (const rider of game.riders) {
+    for (const point of rider.trail) {
+      game.occupied.add(toTrailKey(point.x, point.y));
+    }
+  }
 
   game.riders.forEach((rider) => {
     if (!rider.alive) return;
@@ -115,8 +136,7 @@ export async function tickZatacka(roomCode: string, game: InternalZatackaGame, p
     }
 
     rider.trail.push({ x: rider.position.x, y: rider.position.y });
-    if (rider.trail.length > 180) rider.trail.shift();
-    game.occupied.add(toTrailKey(rider.position.x, rider.position.y));
+    if (rider.trail.length > TRAIL_CAP) rider.trail.shift();
   });
 
   const alive = game.riders.filter((rider) => rider.alive);
@@ -173,6 +193,7 @@ export function buildZatackaSnapshot(game: InternalZatackaGame): ZatackaSnapshot
       color: rider.color,
       points: rider.trail
     })),
-    winnerId: game.winnerId
+    winnerId: game.winnerId,
+    countdownEndsAt: game.countdownEndsAt
   };
 }
