@@ -19,6 +19,7 @@ COPY package.json ./package.json
 COPY tsconfig.base.json ./tsconfig.base.json
 COPY apps/server ./apps/server
 COPY packages/shared ./packages/shared
+COPY infra ./infra
 
 RUN npm run build --workspace @rippd/shared && npm run build --workspace @rippd/server
 
@@ -30,6 +31,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/apps/server ./apps/server
 COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/infra ./infra
 
 WORKDIR /app/apps/server
 EXPOSE 3001
