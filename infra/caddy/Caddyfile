@@ -1,0 +1,13 @@
+rippd.com {
+  encode gzip zstd
+  reverse_proxy web:3000
+}
+
+www.rippd.com {
+  redir https://rippd.com{uri} permanent
+}
+
+api.rippd.com {
+  encode gzip zstd
+  reverse_proxy server:3001
+}

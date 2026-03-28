@@ -1,0 +1,12 @@
+{
+  "name": "rippd",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:web": "npm --workspace @rippd/web run dev",
+    "dev:server": "npm --workspace @rippd/server run dev",
+    "build": "npm run build --workspace @rippd/shared && npm run build --workspace @rippd/server && npm run build --workspace @rippd/web",
+    "lint": "npm run lint --workspace @rippd/web"
+  }
+}

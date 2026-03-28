@@ -1,0 +1,63 @@
+version: '3.9'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_SERVER_URL: wss://api.minervateach.com
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_SERVER_URL: wss://api.minervateach.com
+    depends_on:
+      - server
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3001:3001'
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      CLIENT_ORIGIN: https://student.minervateach.com
+      PUBLIC_SERVER_URL: wss://api.minervateach.com
+      REDIS_URL: redis://redis:6379
+      POSTGRES_URL: postgresql://rippd:${POSTGRES_PASSWORD}@postgres:5432/rippd
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY}
+      ROOM_TTL_SECONDS: 21600
+      PERSIST_MATCH_EVENTS: 'true'
+      RECONNECT_WINDOW_SECONDS: 45
+    depends_on:
+      - redis
+      - postgres
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rippd
+      POSTGRES_USER: rippd
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  postgres_data:
+  redis_data:
