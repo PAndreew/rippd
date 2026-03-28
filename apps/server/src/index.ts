@@ -70,6 +70,28 @@ async function bootstrap() {
 
   gameServer.define('rippd', RippdRoom).filterBy(['roomCode', 'game']);
 
+  // Colyseus removes all 'request' listeners and wraps them so matchmaking
+  // routes are handled before Express — our cors() middleware never fires for
+  // those routes.  Intercept here, after Colyseus has installed its handler,
+  // and prepend CORS header injection for every request.
+  const colyseusHandlers = server.listeners('request').slice() as ((...args: unknown[]) => void)[];
+  server.removeAllListeners('request');
+  server.on('request', (req: http.IncomingMessage, res: http.ServerResponse) => {
+    const origin = req.headers.origin as string | undefined;
+    if (origin === config.clientOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    for (const handler of colyseusHandlers) handler.call(server, req, res);
+  });
+
   app.post('/matchmake/join-or-create', async (req, res) => {
     try {
       const { roomCode, game, nickname } = req.body as { roomCode: string; game: 'zatacka' | 'ramses'; nickname: string };
