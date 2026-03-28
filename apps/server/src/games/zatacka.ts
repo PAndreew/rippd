@@ -21,7 +21,6 @@ export type InternalZatackaGame = {
   height: number;
   round: number;
   riders: InternalZatackaRider[];
-  occupied: Set<string>;
   winnerId?: string;
   restartAt?: number;
   startedAt?: number;
@@ -29,6 +28,12 @@ export type InternalZatackaGame = {
 };
 
 const TRAIL_CAP = 500;
+// Collision fires when head center is within this distance of a trail point center.
+// Equal to lineWidth (4px) so two bodies must visually overlap to register a hit.
+const HIT_RADIUS_SQ = 16; // 4^2
+// How many of a rider's own most-recent trail points to skip for self-collision,
+// so tight turns don't clip the fresh wake.
+const SELF_GRACE = 10;
 
 export function createZatackaGame(): InternalZatackaGame {
   return {
@@ -37,8 +42,7 @@ export function createZatackaGame(): InternalZatackaGame {
     width: 960,
     height: 600,
     round: 0,
-    riders: [],
-    occupied: new Set<string>()
+    riders: []
   };
 }
 
@@ -61,16 +65,30 @@ function sampleCirclePositions(count: number, width: number, height: number) {
   const radius = Math.min(width, height) * 0.28;
   return Array.from({ length: count }, (_, index) => {
     const posAngle = (Math.PI * 2 * index) / count;
+    // Tangential direction (clockwise) with a small random offset so players
+    // travel along the circle initially rather than rushing at walls or each other.
+    const tangent = posAngle + Math.PI / 2;
+    const jitter = (Math.random() - 0.5) * 0.6;
     return {
       x: width / 2 + Math.cos(posAngle) * radius,
       y: height / 2 + Math.sin(posAngle) * radius,
-      angle: Math.random() * Math.PI * 2
+      angle: wrapAngle(tangent + jitter)
     };
   });
 }
 
-function toTrailKey(x: number, y: number) {
-  return `${Math.round(x / 4)},${Math.round(y / 4)}`;
+function hitsTrail(x: number, y: number, riders: InternalZatackaRider[], selfId: string): boolean {
+  for (const rider of riders) {
+    const trail = rider.trail;
+    // Skip the rider's own freshest points so turns don't clip the wake.
+    const limit = rider.id === selfId ? Math.max(0, trail.length - SELF_GRACE) : trail.length;
+    for (let i = 0; i < limit; i++) {
+      const dx = x - trail[i].x;
+      const dy = y - trail[i].y;
+      if (dx * dx + dy * dy < HIT_RADIUS_SQ) return true;
+    }
+  }
+  return false;
 }
 
 export function startZatacka(roomCode: string, game: InternalZatackaGame, players: PlayerSeat[]) {
@@ -78,7 +96,6 @@ export function startZatacka(roomCode: string, game: InternalZatackaGame, player
   game.phase = 'countdown';
   game.round += 1;
   game.winnerId = undefined;
-  game.occupied = new Set<string>();
   game.restartAt = undefined;
   game.startedAt = undefined;
   game.countdownEndsAt = Date.now() + 3000;
@@ -114,23 +131,17 @@ export async function tickZatacka(roomCode: string, game: InternalZatackaGame, p
 
   if (game.phase !== 'running') return false;
 
-  // Rebuild occupied from current trails so collision always matches what is visible
-  game.occupied = new Set<string>();
-  for (const rider of game.riders) {
-    for (const point of rider.trail) {
-      game.occupied.add(toTrailKey(point.x, point.y));
-    }
-  }
-
   game.riders.forEach((rider) => {
     if (!rider.alive) return;
     rider.angle = wrapAngle(rider.angle + rider.steering * 0.14);
     rider.position.x += Math.cos(rider.angle) * rider.speed;
     rider.position.y += Math.sin(rider.angle) * rider.speed;
 
-    const outOfBounds = rider.position.x < 4 || rider.position.x > game.width - 4 || rider.position.y < 4 || rider.position.y > game.height - 4;
-    const collision = game.occupied.has(toTrailKey(rider.position.x, rider.position.y));
-    if (outOfBounds || collision) {
+    const outOfBounds =
+      rider.position.x < 4 || rider.position.x > game.width - 4 ||
+      rider.position.y < 4 || rider.position.y > game.height - 4;
+
+    if (outOfBounds || hitsTrail(rider.position.x, rider.position.y, game.riders, rider.id)) {
       rider.alive = false;
       return;
     }
