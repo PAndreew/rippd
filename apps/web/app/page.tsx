@@ -205,91 +205,107 @@ function PlayModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="surface-panel-strong w-full max-w-4xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(110,231,183,0.2),transparent_34%),linear-gradient(180deg,#091229_0%,#050816_100%)] px-7 py-7 lg:border-b-0 lg:border-r lg:border-white/10 lg:px-8 lg:py-8">
-            <div className="eyebrow">{meta.tagline}</div>
-            <h2 className="mt-2 text-4xl font-black text-white">{meta.name}</h2>
-            <p className="mt-4 max-w-lg text-base text-white/65">Choose whether you want to jump in immediately as a guest or use an account for a saved identity. Either way, room links still stay fast.</p>
-            <div className="mt-6 flex flex-wrap gap-2">
+    <div className="fixed inset-0 z-50 bg-black/75 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex min-h-full items-center justify-center">
+        <div
+          className="surface-panel-strong max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-none"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="bg-[radial-gradient(circle_at_top_left,rgba(110,231,183,0.2),transparent_34%),linear-gradient(180deg,#091229_0%,#050816_100%)] px-5 py-5 sm:px-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="eyebrow">Play</div>
+                <h2 className="mt-2 text-3xl font-black text-white sm:text-4xl">{meta.name}</h2>
+              </div>
+              <ZigzagButton
+                onClick={onClose}
+                className="flex h-11 w-11 items-center justify-center border border-white/15 bg-white/5 text-lg font-black text-white hover:border-white/35 hover:bg-white/10"
+              >
+                ×
+              </ZigzagButton>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
               {theme.badgeClasses.map((badge, index) => (
                 <CategoryBadge key={badge} tone={CATEGORY_BADGE_TONES[index % CATEGORY_BADGE_TONES.length]}>
                   {badge}
                 </CategoryBadge>
               ))}
             </div>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <button
-                onClick={() => setPlayMode('guest')}
-                className={`rounded-[22px] border px-4 py-4 text-left ${
-                  playMode === 'guest' ? 'border-white bg-white text-slate-950' : 'border-white/12 bg-white/5 text-white'
-                }`}
-              >
-                <div className="text-xs font-black uppercase tracking-[0.18em]">Play as guest</div>
-                <div className={`mt-2 text-sm ${playMode === 'guest' ? 'text-slate-700' : 'text-white/60'}`}>Best for quick room links and couch co-op.</div>
-              </button>
-              <button
-                onClick={() => setPlayMode('account')}
-                className={`rounded-[22px] border px-4 py-4 text-left ${
-                  playMode === 'account' ? 'border-white bg-white text-slate-950' : 'border-white/12 bg-white/5 text-white'
-                }`}
-              >
-                <div className="text-xs font-black uppercase tracking-[0.18em]">Use account</div>
-                <div className={`mt-2 text-sm ${playMode === 'account' ? 'text-slate-700' : 'text-white/60'}`}>Save your identity and sign back in later.</div>
-              </button>
-            </div>
-
-            {playMode === 'guest' ? (
-              <label className="mt-6 block">
-                <span className="field-label">Guest nickname</span>
-                <input
-                  autoFocus
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && createRoom()}
-                  placeholder="Enter your nickname…"
-                  className="text-field"
-                />
-              </label>
-            ) : (
-              <div className="mt-6">
-                <AuthPanel user={currentUser} setUser={setCurrentUser} setError={setAuthError} authError={authError} />
-              </div>
-            )}
           </div>
 
-          <div className="bg-white px-7 py-7 text-slate-950 lg:px-8 lg:py-8">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Ready to play</div>
-            <div className="mt-2 text-3xl font-black">{activeName}</div>
-            <p className="mt-3 text-sm text-slate-500">Create a fresh room or join with an existing code. If you sign in, your display name is used automatically.</p>
+          <ZigzagDivider upper="#050816" lower="#ffffff" height={28} />
 
-            <ZigzagButton onClick={createRoom} className="mt-8 action-button w-full">
-              Create room
-            </ZigzagButton>
+          <div className="grid lg:grid-cols-[1fr_0.95fr]">
+            <div className="bg-[linear-gradient(180deg,#091229_0%,#050816_100%)] px-5 py-5 text-white sm:px-6 sm:py-6 lg:border-r lg:border-white/10">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ZigzagButton
+                  onClick={() => setPlayMode('guest')}
+                  className={`w-full px-4 py-4 text-left text-xs font-black uppercase tracking-[0.18em] ${
+                    playMode === 'guest' ? 'bg-white text-slate-950' : 'border border-white/15 bg-white/5 text-white hover:border-white/35 hover:bg-white/10'
+                  }`}
+                >
+                  Play as guest
+                </ZigzagButton>
+                <ZigzagButton
+                  onClick={() => setPlayMode('account')}
+                  className={`w-full px-4 py-4 text-left text-xs font-black uppercase tracking-[0.18em] ${
+                    playMode === 'account' ? 'bg-white text-slate-950' : 'border border-white/15 bg-white/5 text-white hover:border-white/35 hover:bg-white/10'
+                  }`}
+                >
+                  Use account
+                </ZigzagButton>
+              </div>
 
-            <div className="relative py-5 text-center">
-              <div className="absolute inset-y-1/2 left-0 right-0 border-t border-slate-200" />
-              <span className="relative bg-white px-4 text-[11px] uppercase tracking-widest text-slate-400">or join a room</span>
+              {playMode === 'guest' ? (
+                <label className="mt-5 block">
+                  <span className="field-label">Guest nickname</span>
+                  <input
+                    autoFocus
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && createRoom()}
+                    placeholder="Enter your nickname…"
+                    className="text-field"
+                  />
+                </label>
+              ) : (
+                <div className="mt-5">
+                  <AuthPanel user={currentUser} setUser={setCurrentUser} setError={setAuthError} authError={authError} />
+                </div>
+              )}
             </div>
 
-            <div className="flex gap-2">
-              <input
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && joinRoom()}
-                placeholder="ROOM42"
-                maxLength={8}
-                className="min-w-0 flex-1 rounded-[20px] border border-slate-200 px-4 py-3 font-mono text-base uppercase outline-none focus:border-slate-900"
-              />
-              <ZigzagButton onClick={joinRoom} className="border border-slate-200 px-5 py-5 text-sm font-black uppercase tracking-[0.18em] hover:bg-slate-950 hover:text-white">
-                Join
+            <div className="bg-white px-5 py-5 text-slate-950 sm:px-6 sm:py-6">
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Ready to play</div>
+              <div className="mt-2 text-2xl font-black sm:text-3xl">{activeName}</div>
+
+              <ZigzagButton onClick={createRoom} className="mt-6 action-button w-full">
+                Create room
               </ZigzagButton>
-            </div>
 
-            <div className="mt-8 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Privacy</div>
-              <p className="mt-2 text-sm text-slate-600">Account records are stored with encrypted personal fields in the database. Guests can still play without creating anything.</p>
+              <div className="relative py-4 text-center">
+                <div className="absolute inset-y-1/2 left-0 right-0 border-t border-slate-200" />
+                <span className="relative bg-white px-4 text-[11px] uppercase tracking-widest text-slate-400">or join a room</span>
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && joinRoom()}
+                  placeholder="ROOM42"
+                  maxLength={8}
+                  className="min-w-0 flex-1 rounded-[20px] border border-slate-200 px-4 py-3 font-mono text-base uppercase outline-none focus:border-slate-900"
+                />
+                <ZigzagButton onClick={joinRoom} className="border border-slate-200 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] hover:bg-slate-950 hover:text-white">
+                  Join
+                </ZigzagButton>
+              </div>
+
+              <div className="mt-6 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Privacy</div>
+                <p className="mt-2 text-sm text-slate-600">Account records are stored with encrypted personal fields in the database. Guests can still play without creating anything.</p>
+              </div>
             </div>
           </div>
         </div>
