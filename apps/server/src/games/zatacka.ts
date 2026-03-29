@@ -48,14 +48,18 @@ export type InternalZatackaGame = {
   settings: ZatackaSettings;
 };
 
-const DEFAULT_SPEED = 3.6;
-const MIN_SPEED = 2.2;
-const MAX_SPEED = 7.2;
+const DEFAULT_SPEED_LEVEL = 5; // 1–10 integer; level 5 ≈ 3.9 px/tick
+const MIN_SPEED_LEVEL = 1;
+const MAX_SPEED_LEVEL = 10;
 const TRAIL_CAP = 700;
 const HIT_RADIUS_SQ = 16;
 const SELF_GRACE = 10;
 const GAP_CYCLE_TICKS = 56;
-const GAP_OPEN_TICKS = 12;
+const GAP_OPEN_TICKS = 4; // ~15 px at level 5 — narrow enough to need skill
+
+function speedFromLevel(level: number) {
+  return 1.5 + (level - 1) * 0.6; // level 1 → 1.5, level 5 → 3.9, level 10 → 7.1
+}
 const POWERUP_SPAWN_EVERY_MS = 7000;
 const MAX_POWERUPS_ON_BOARD = 3;
 const POWERUP_PICKUP_RADIUS_SQ = 18 * 18;
@@ -72,7 +76,7 @@ function createInternalRider(seat: PlayerSeat, index: number): InternalZatackaRi
     position: { x: 0, y: 0 },
     angle: 0,
     steering: 0,
-    speed: DEFAULT_SPEED,
+    speed: speedFromLevel(DEFAULT_SPEED_LEVEL),
     alive: false,
     trail: [],
     trailTicks: 0,
@@ -91,7 +95,7 @@ export function createZatackaGame(): InternalZatackaGame {
     powerups: [],
     paused: false,
     settings: {
-      speed: DEFAULT_SPEED,
+      speed: DEFAULT_SPEED_LEVEL,
       walls: true,
       gaps: true
     }
@@ -199,9 +203,10 @@ function carveTrailHole(game: InternalZatackaGame, center: Point, radiusSq: numb
 
 export function applyZatackaSettings(game: InternalZatackaGame, update: ZatackaSettingsUpdate) {
   if (typeof update.speed === 'number' && Number.isFinite(update.speed)) {
-    game.settings.speed = clamp(update.speed, MIN_SPEED, MAX_SPEED);
+    game.settings.speed = clamp(Math.round(update.speed), MIN_SPEED_LEVEL, MAX_SPEED_LEVEL);
+    const px = speedFromLevel(game.settings.speed);
     game.riders.forEach((rider) => {
-      rider.speed = game.settings.speed;
+      rider.speed = px;
     });
   }
 
@@ -226,7 +231,7 @@ export function startZatacka(roomCode: string, game: InternalZatackaGame, player
       ...createInternalRider(player, index),
       position: { x: start.x, y: start.y },
       angle: start.angle,
-      speed: game.settings.speed,
+      speed: speedFromLevel(game.settings.speed),
       alive: true
     };
   });
@@ -307,7 +312,7 @@ export async function tickZatacka(roomCode: string, game: InternalZatackaGame, p
       playerCount,
       startedAt: game.startedAt ? new Date(game.startedAt) : undefined,
       endedAt: new Date(),
-      summary: { round: game.round, walls: game.settings.walls, speed: game.settings.speed }
+      summary: { round: game.round, walls: game.settings.walls, speedLevel: game.settings.speed }
     });
     return true;
   }

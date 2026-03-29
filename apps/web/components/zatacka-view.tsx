@@ -174,6 +174,7 @@ export function ZatackaView({
 
     let frame = 0;
     const lastSteering = new Map<string, -1 | 0 | 1>();
+    const lastPowerupPressed = new Map<string, boolean>();
     const tickGamepads = () => {
       const pads = navigator.getGamepads?.() ?? [];
       localPlayers.forEach((player, index) => {
@@ -185,7 +186,11 @@ export function ZatackaView({
           lastSteering.set(player.id, steering);
           onInput({ playerId: player.id, steering });
         }
-
+        const powerupPressed = pad.buttons[0]?.pressed ?? false;
+        if (powerupPressed && !lastPowerupPressed.get(player.id)) {
+          onUsePowerup({ playerId: player.id });
+        }
+        lastPowerupPressed.set(player.id, powerupPressed);
       });
       frame = window.requestAnimationFrame(tickGamepads);
     };
@@ -213,7 +218,7 @@ export function ZatackaView({
           <div>Round: <span className="font-semibold text-black">{game.round}</span></div>
           <div>State: <span className="font-semibold text-black">{game.phase}</span></div>
           <div>Alive: <span className="font-semibold text-black">{game.riders.filter((rider) => rider.alive).length}</span></div>
-          <div>Speed: <span className="font-semibold text-black">{game.settings.speed.toFixed(1)}</span></div>
+          <div>Speed: <span className="font-semibold text-black">{game.settings.speed}/10</span></div>
           <div>Walls: <span className="font-semibold text-black">{game.settings.walls ? 'On' : 'Wrap'}</span></div>
           <div>Gaps: <span className="font-semibold text-black">{game.settings.gaps ? 'On' : 'Off'}</span></div>
           <div>Powerups: <span className="font-semibold text-black">{game.powerups.length}</span></div>
@@ -288,17 +293,33 @@ export function ZatackaView({
 
       {!isFullscreen && (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {game.riders.map((rider) => (
-            <div key={rider.id} className="rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm">
-              <div className="flex items-center gap-2 font-semibold text-black">
-                <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: rider.color }} />
-                {rider.name}
+          {game.riders.map((rider) => {
+            const isLocal = snapshot.viewer.localPlayerIds.includes(rider.id);
+            return (
+              <div key={rider.id} className="rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm">
+                <div className="flex items-center gap-2 font-semibold text-black">
+                  <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: rider.color }} />
+                  {rider.name}
+                </div>
+                <div className="mt-2 text-black/55">{rider.alive ? 'Alive' : 'Crashed'} · {rider.controlPreset.toUpperCase()}</div>
+                {rider.carriedPowerup ? (
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="font-medium text-black capitalize">{rider.ghostActive ? '👻 Ghost active' : `⚡ ${rider.carriedPowerup}`}</span>
+                    {isLocal && rider.alive && !rider.ghostActive && (
+                      <button
+                        onPointerDown={() => onUsePowerup({ playerId: rider.id })}
+                        className="rounded-full bg-black px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-white hover:bg-black/80 active:scale-95"
+                      >
+                        Use
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-black/40">No powerup</div>
+                )}
               </div>
-              <div className="mt-2 text-black/55">{rider.alive ? 'Alive' : 'Crashed'} · {rider.controlPreset.toUpperCase()}</div>
-              <div className="mt-1 text-black/55">Powerup: <span className="font-medium text-black">{rider.carriedPowerup ?? 'none'}</span></div>
-              <div className="mt-1 text-black/55">Ghost: <span className="font-medium text-black">{rider.ghostActive ? 'active' : 'off'}</span></div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

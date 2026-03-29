@@ -451,7 +451,7 @@ function Navbar({ user, onMenuClick }: { user: AuthUser | null; onMenuClick: () 
     <div className="shell-width pt-4 sm:pt-6">
       <nav className="zen-nav-shell">
         <div className="flex items-center justify-between gap-3 sm:gap-6">
-          <span className="display-font text-4xl font-black uppercase tracking-[-0.06em] sm:text-5xl">
+          <span className="display-font text-4xl font-black uppercase tracking-[-0.01em] sm:text-5xl sm:tracking-[-0.04em]">
             rippd
           </span>
           <button onClick={onMenuClick} className="zen-burger" aria-label="Menu">
@@ -490,7 +490,7 @@ function Footer() {
     <footer className="pb-10 pt-8">
       <div className="shell-width">
         <div className="rounded-[34px] bg-black px-6 py-8 text-white shadow-[0_24px_80px_rgba(0,0,0,0.2)] sm:px-8">
-          <p className="display-font text-4xl font-black uppercase tracking-[-0.06em]">rippd</p>
+          <p className="display-font text-4xl font-black uppercase tracking-[-0.01em] sm:tracking-[-0.04em]">rippd</p>
           <p className="mt-2 text-sm text-white/48">Copyright 2026</p>
         </div>
       </div>

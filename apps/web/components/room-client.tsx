@@ -20,6 +20,36 @@ import { fetchCurrentUser, getStoredAuthToken, type AuthUser } from '@/lib/auth'
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'ws://localhost:3001';
 const presets: ControlPreset[] = ['arrows', 'wasd', 'tfgh', 'ijkl'];
 
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors ${checked ? 'bg-black' : 'bg-black/18'}`}
+    >
+      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+    </button>
+  );
+}
+
+function ClipboardIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  );
+}
+
 type SavedReconnect = {
   roomCode: string;
   roomId: string;
@@ -155,7 +185,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
       <main className="zen-room-stage flex min-h-screen items-center justify-center px-6 text-center">
         <div>
           <div className="eyebrow">Connecting</div>
-          <div className="mt-4 display-font text-6xl font-black uppercase tracking-[-0.06em]">Room {roomId}</div>
+          <div className="mt-4 display-font text-6xl font-black uppercase tracking-[-0.01em] sm:tracking-[-0.04em]">Room {roomId}</div>
         </div>
       </main>
     );
@@ -172,7 +202,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div>
               <div className="eyebrow !text-white/40">Room {snapshot?.roomId ?? roomId}</div>
-              <div className="mt-5 display-font text-[clamp(3.7rem,8vw,7rem)] font-black uppercase leading-[0.88] tracking-[-0.06em] text-white">
+              <div className="mt-5 display-font text-[clamp(3.7rem,8vw,7rem)] font-black uppercase leading-[0.88] tracking-[-0.01em] sm:tracking-[-0.04em] text-white">
                 {gameName}
               </div>
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/64 sm:text-base">
@@ -191,7 +221,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
             <div id="room-quick-actions" className="rounded-[30px] bg-[#ece8ff] p-5 text-black">
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Quick actions</div>
               <div id="room-action-buttons" className="mt-4 flex flex-wrap gap-3">
-                <button onClick={copyInvite} className="rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
+                <button onClick={copyInvite} className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
+                  {copied ? <CheckIcon /> : <ClipboardIcon />}
                   {copied ? 'Copied!' : 'Copy invite'}
                 </button>
                 <button onClick={addLocalPlayer} className="rounded-full border-2 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
@@ -213,46 +244,40 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Speed</div>
-                      <div>{zatackaGame.settings.speed.toFixed(1)}</div>
+                      <div className="text-xs text-black/50">1 = slow · 10 = fast</div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => send('room:updateZatackaSettings', { speed: zatackaGame.settings.speed - 0.4 })}
-                        className="rounded-full border border-black/15 px-4 py-2 font-bold uppercase tracking-[0.12em] text-black hover:bg-black/6"
-                      >
-                        Slower
-                      </button>
-                      <button
-                        onClick={() => send('room:updateZatackaSettings', { speed: zatackaGame.settings.speed + 0.4 })}
-                        className="rounded-full border border-black/15 px-4 py-2 font-bold uppercase tracking-[0.12em] text-black hover:bg-black/6"
-                      >
-                        Faster
-                      </button>
-                    </div>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={zatackaGame.settings.speed}
+                      onChange={(e) => {
+                        const val = Math.round(Number(e.target.value));
+                        if (val >= 1 && val <= 10) send('room:updateZatackaSettings', { speed: val });
+                      }}
+                      className="w-16 rounded-[14px] border border-black/15 bg-transparent px-2 py-1.5 text-center text-sm font-bold text-black outline-none focus:border-black/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    />
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Walls</div>
-                      <div>{zatackaGame.settings.walls ? 'Crash at edge' : 'Wrap around screen'}</div>
+                      <div className="text-xs">{zatackaGame.settings.walls ? 'Crash at edge' : 'Wrap around'}</div>
                     </div>
-                    <button
-                      onClick={() => send('room:updateZatackaSettings', { walls: !zatackaGame.settings.walls })}
-                      className="rounded-full border border-black/15 px-4 py-2 font-bold uppercase tracking-[0.12em] text-black hover:bg-black/6"
-                    >
-                      {zatackaGame.settings.walls ? 'Turn walls off' : 'Turn walls on'}
-                    </button>
+                    <ToggleSwitch
+                      checked={zatackaGame.settings.walls}
+                      onChange={() => send('room:updateZatackaSettings', { walls: !zatackaGame.settings.walls })}
+                    />
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Gaps</div>
-                      <div>{zatackaGame.settings.gaps ? 'Periodic openings are enabled' : 'Continuous trails'}</div>
+                      <div className="text-xs">{zatackaGame.settings.gaps ? 'Gaps in trails' : 'Solid trails'}</div>
                     </div>
-                    <button
-                      onClick={() => send('room:updateZatackaSettings', { gaps: !zatackaGame.settings.gaps })}
-                      className="rounded-full border border-black/15 px-4 py-2 font-bold uppercase tracking-[0.12em] text-black hover:bg-black/6"
-                    >
-                      {zatackaGame.settings.gaps ? 'Turn gaps off' : 'Turn gaps on'}
-                    </button>
+                    <ToggleSwitch
+                      checked={zatackaGame.settings.gaps}
+                      onChange={() => send('room:updateZatackaSettings', { gaps: !zatackaGame.settings.gaps })}
+                    />
                   </div>
                 </div>
               )}
@@ -302,7 +327,16 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
 
               <div id="room-invite" className="mt-5">
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Invite link</div>
-                <div className="mt-2 break-all text-sm text-black/55">{shareUrl}</div>
+                <div className="mt-2 flex items-start gap-2">
+                  <div className="min-w-0 break-all text-sm text-black/55">{shareUrl}</div>
+                  <button
+                    onClick={copyInvite}
+                    className="shrink-0 rounded-full bg-black/8 p-2 text-black/60 hover:bg-black/15 hover:text-black"
+                    title="Copy invite link"
+                  >
+                    {copied ? <CheckIcon /> : <ClipboardIcon />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

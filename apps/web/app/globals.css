@@ -185,9 +185,15 @@ input {
 
   .zen-display-title {
     line-height: 0.9;
-    letter-spacing: -0.06em;
+    letter-spacing: -0.01em;
     text-transform: uppercase;
     @apply display-font font-black text-black;
+  }
+
+  @media (min-width: 640px) {
+    .zen-display-title {
+      letter-spacing: -0.04em;
+    }
   }
 
   .zen-display-title span {
