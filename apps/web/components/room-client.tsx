@@ -9,7 +9,8 @@ import {
   GAME_THEME,
   GameKind,
   RamsesAction,
-  ZatackaControlInput
+  ZatackaControlInput,
+  ZatackaUsePowerupInput
 } from '@rippd/shared';
 import { ZatackaView } from '@/components/zatacka-view';
 import { RamsesView } from '@/components/ramses-view';
@@ -147,6 +148,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
     setTimeout(() => setCopied(false), 1200);
   };
 
+  const zatackaGame = snapshot?.game === 'zatacka' && snapshot.gameState.type === 'zatacka' ? snapshot.gameState : null;
+
   if (joining && !snapshot) {
     return (
       <main className="zen-room-stage flex min-h-screen items-center justify-center px-6 text-center">
@@ -197,19 +200,69 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <button onClick={startGame} className="rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/10">
                   Start / restart
                 </button>
-                {snapshot?.game === 'zatacka' && snapshot.gameState.type === 'zatacka' &&
-                  (snapshot.gameState.phase === 'running' || snapshot.gameState.phase === 'countdown') && (
+                {zatackaGame && (zatackaGame.phase === 'running' || zatackaGame.phase === 'countdown') && (
                   <button onClick={() => send('room:pauseGame', {})} className="rounded-full border-2 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
-                    {(snapshot.gameState as { paused?: boolean }).paused ? 'Resume' : 'Pause'}
+                    {zatackaGame.paused ? 'Resume' : 'Pause'}
                   </button>
                 )}
               </div>
+
+              {zatackaGame && (
+                <div className="mt-5 rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm text-black/70">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Slither settings</div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-black">Speed</div>
+                      <div>{zatackaGame.settings.speed.toFixed(1)}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => send('room:updateZatackaSettings', { speed: zatackaGame.settings.speed - 0.4 })}
+                        className="rounded-full border border-black/15 px-4 py-2 font-bold uppercase tracking-[0.12em] text-black hover:bg-black/6"
+                      >
+                        Slower
+                      </button>
+                      <button
+                        onClick={() => send('room:updateZatackaSettings', { speed: zatackaGame.settings.speed + 0.4 })}
+                        className="rounded-full border border-black/15 px-4 py-2 font-bold uppercase tracking-[0.12em] text-black hover:bg-black/6"
+                      >
+                        Faster
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-black">Walls</div>
+                      <div>{zatackaGame.settings.walls ? 'Crash at edge' : 'Wrap around screen'}</div>
+                    </div>
+                    <button
+                      onClick={() => send('room:updateZatackaSettings', { walls: !zatackaGame.settings.walls })}
+                      className="rounded-full border border-black/15 px-4 py-2 font-bold uppercase tracking-[0.12em] text-black hover:bg-black/6"
+                    >
+                      {zatackaGame.settings.walls ? 'Turn walls off' : 'Turn walls on'}
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-black">Gaps</div>
+                      <div>{zatackaGame.settings.gaps ? 'Periodic openings are enabled' : 'Continuous trails'}</div>
+                    </div>
+                    <button
+                      onClick={() => send('room:updateZatackaSettings', { gaps: !zatackaGame.settings.gaps })}
+                      className="rounded-full border border-black/15 px-4 py-2 font-bold uppercase tracking-[0.12em] text-black hover:bg-black/6"
+                    >
+                      {zatackaGame.settings.gaps ? 'Turn gaps off' : 'Turn gaps on'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div id="room-players" className="mt-5">
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Players</div>
                 <div className="mt-3 space-y-2">
                   {snapshot?.players.map((player) => {
                     const isLocal = snapshot.viewer.localPlayerIds.includes(player.id);
+                    const riderState = zatackaGame?.riders.find((rider) => rider.id === player.id);
                     return (
                       <div key={player.id} className="rounded-[20px] border border-black/10 bg-white/60 px-4 py-3 text-sm">
                         <div className="flex items-center justify-between gap-3">
@@ -235,6 +288,12 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                           <span className="text-xs uppercase tracking-[0.18em] text-black/40 shrink-0">{player.controlPreset}</span>
                         </div>
                         <div className="mt-1 text-black/50">{isLocal ? 'This device · tap name to rename' : 'Remote player'}</div>
+                        {riderState && (
+                          <div className="mt-1 text-black/55">
+                            Powerup: <span className="font-medium text-black">{riderState.carriedPowerup ?? 'none'}</span>
+                            {riderState.ghostActive ? ' · ghost active' : ''}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -254,7 +313,11 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
         <section id="room-game-section" className="grid gap-6 xl:grid-cols-[1fr_260px]">
           <div id="room-game-board" ref={gameWrapperRef} className="rounded-[34px] border border-black/10 bg-white/30 p-3 shadow-[0_24px_60px_rgba(25,18,53,0.12)] backdrop-blur-md sm:p-4">
             {snapshot?.game === 'zatacka' ? (
-              <ZatackaView snapshot={snapshot} onInput={(input: ZatackaControlInput) => send('zatacka:input', input)} />
+              <ZatackaView
+                snapshot={snapshot}
+                onInput={(input: ZatackaControlInput) => send('zatacka:input', input)}
+                onUsePowerup={(input: ZatackaUsePowerupInput) => send('zatacka:usePowerup', input)}
+              />
             ) : snapshot?.game === 'ramses' ? (
               <RamsesView snapshot={snapshot} onAction={(action: RamsesAction) => send('ramses:action', action)} />
             ) : null}
@@ -264,12 +327,22 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
             <div id="room-controls" className="rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
               <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Controls</div>
               <ul className="space-y-1">
-                <li>Arrows: left / right</li>
-                <li>WASD: A / D</li>
-                <li>TFGH: F / H</li>
-                <li>IJKL: J / L</li>
+                <li>Arrows: left / right · use powerup with up</li>
+                <li>WASD: A / D · use powerup with W</li>
+                <li>TFGH: F / H · use powerup with T</li>
+                <li>IJKL: J / L · use powerup with I</li>
               </ul>
             </div>
+            {zatackaGame && (
+              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
+                <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Powerups</div>
+                <ul className="space-y-2">
+                  <li><span className="font-semibold text-white">Bomb:</span> blows a small hole through every trail near you.</li>
+                  <li><span className="font-semibold text-white">Ghost:</span> your snake becomes permeable for a short time.</li>
+                  <li><span className="font-semibold text-white">Inventory:</span> each player holds only their most recent pickup.</li>
+                </ul>
+              </div>
+            )}
           </aside>
         </section>
       </div>

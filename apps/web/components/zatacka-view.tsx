@@ -1,9 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ClientRoomSnapshot, CONTROL_KEYSETS, ZatackaControlInput } from '@rippd/shared';
+import { ClientRoomSnapshot, CONTROL_KEYSETS, ZatackaControlInput, ZatackaUsePowerupInput } from '@rippd/shared';
 
-export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapshot; onInput: (input: ZatackaControlInput) => void }) {
+export function ZatackaView({
+  snapshot,
+  onInput,
+  onUsePowerup
+}: {
+  snapshot: ClientRoomSnapshot;
+  onInput: (input: ZatackaControlInput) => void;
+  onUsePowerup: (input: ZatackaUsePowerupInput) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -11,14 +19,12 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
   const [showGo, setShowGo] = useState(false);
   const game = snapshot.gameState.type === 'zatacka' ? snapshot.gameState : null;
 
-  // Track fullscreen state
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handler);
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
-  // Countdown timer
   useEffect(() => {
     if (game?.phase !== 'countdown') {
       setCountdownSecs(null);
@@ -41,7 +47,6 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
     return () => clearInterval(id);
   }, [game?.phase, game?.countdownEndsAt]);
 
-  // Hide "Go!" after a short delay once running
   useEffect(() => {
     if (game?.phase === 'running' && showGo) {
       const id = setTimeout(() => setShowGo(false), 700);
@@ -49,7 +54,6 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
     }
   }, [game?.phase, showGo]);
 
-  // Canvas drawing
   useEffect(() => {
     if (!game || !canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -58,6 +62,7 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
 
     ctx.fillStyle = '#060606';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.strokeStyle = '#181227';
     ctx.lineWidth = 1;
     for (let x = 0; x <= canvas.width; x += 40) {
@@ -73,28 +78,73 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
       ctx.stroke();
     }
 
+    if (game.settings.walls) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+    }
+
+    const riderById = new Map(game.riders.map((r) => [r.id, r]));
     for (const trail of game.trails) {
-      if (!trail.points.length) continue;
+      const rider = riderById.get(trail.playerId);
+      if (!trail.segments.length) continue;
       ctx.strokeStyle = trail.color;
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.beginPath();
-      trail.points.forEach((point, index) => {
-        if (index === 0) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-      });
-      ctx.stroke();
+      ctx.globalAlpha = rider?.ghostActive ? 0.45 : 1;
+      for (const segment of trail.segments) {
+        if (segment.length < 2) continue;
+        ctx.beginPath();
+        segment.forEach((point, index) => {
+          if (index === 0) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        });
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
     }
 
-    // Draw small direction indicators (no blob)
+    for (const powerup of game.powerups) {
+      ctx.save();
+      ctx.translate(powerup.position.x, powerup.position.y);
+      if (powerup.kind === 'bomb') {
+        ctx.fillStyle = '#fb923c';
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff7ed';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -14);
+        ctx.lineTo(8, -20);
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = '#67e8f9';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 11, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(103,232,249,0.2)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
     if (game.phase === 'countdown' || game.phase === 'running') {
       for (const rider of game.riders) {
         if (!rider.alive) continue;
-        // Just a tiny bright dot at the tip (radius 2) - no blob
+        if (rider.ghostActive) {
+          ctx.fillStyle = 'rgba(103,232,249,0.25)';
+          ctx.beginPath();
+          ctx.arc(rider.position.x, rider.position.y, 9, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(rider.position.x, rider.position.y, 2, 0, Math.PI * 2);
+        ctx.arc(rider.position.x, rider.position.y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -104,12 +154,13 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
 
   useEffect(() => {
     const handleDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isFullscreen) return; // let browser handle esc
+      if (event.key === 'Escape' && isFullscreen) return;
       localPlayers.forEach((player) => {
         const keyset = CONTROL_KEYSETS[player.controlPreset];
         const key = event.key.toLowerCase();
         if (key === keyset.left) onInput({ playerId: player.id, steering: -1 });
         if (key === keyset.right) onInput({ playerId: player.id, steering: 1 });
+        if (!event.repeat && key === keyset.action) onUsePowerup({ playerId: player.id });
       });
     };
 
@@ -134,6 +185,7 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
           lastSteering.set(player.id, steering);
           onInput({ playerId: player.id, steering });
         }
+
       });
       frame = window.requestAnimationFrame(tickGamepads);
     };
@@ -146,7 +198,7 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
       window.removeEventListener('keydown', handleDown);
       window.removeEventListener('keyup', handleUp);
     };
-  }, [localPlayers, onInput, isFullscreen]);
+  }, [localPlayers, onInput, onUsePowerup, isFullscreen]);
 
   const exitFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -161,6 +213,10 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
           <div>Round: <span className="font-semibold text-black">{game.round}</span></div>
           <div>State: <span className="font-semibold text-black">{game.phase}</span></div>
           <div>Alive: <span className="font-semibold text-black">{game.riders.filter((rider) => rider.alive).length}</span></div>
+          <div>Speed: <span className="font-semibold text-black">{game.settings.speed.toFixed(1)}</span></div>
+          <div>Walls: <span className="font-semibold text-black">{game.settings.walls ? 'On' : 'Wrap'}</span></div>
+          <div>Gaps: <span className="font-semibold text-black">{game.settings.gaps ? 'On' : 'Off'}</span></div>
+          <div>Powerups: <span className="font-semibold text-black">{game.powerups.length}</span></div>
         </div>
       )}
 
@@ -172,7 +228,6 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
           className={isFullscreen ? 'absolute inset-0 m-auto h-full w-full object-contain' : 'h-auto w-full rounded-[30px] border border-black/12 bg-black shadow-[0_26px_60px_rgba(0,0,0,0.24)]'}
         />
 
-        {/* Countdown overlay */}
         {(countdownSecs !== null || showGo) && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div
@@ -193,7 +248,6 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
           </div>
         )}
 
-        {/* Exit fullscreen button */}
         {isFullscreen && (
           <button
             onClick={exitFullscreen}
@@ -203,7 +257,6 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
           </button>
         )}
 
-        {/* Paused overlay */}
         {game.paused && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: 'rgba(0,0,0,0.45)' }}>
             <div style={{ fontSize: 'clamp(4rem,14vw,10rem)', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.06em', lineHeight: 1, textShadow: '0 0 40px rgba(255,255,255,0.3)' }}>
@@ -212,7 +265,6 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
           </div>
         )}
 
-        {/* Round-over overlay in fullscreen */}
         {isFullscreen && game.phase === 'round-over' && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center">
@@ -243,6 +295,8 @@ export function ZatackaView({ snapshot, onInput }: { snapshot: ClientRoomSnapsho
                 {rider.name}
               </div>
               <div className="mt-2 text-black/55">{rider.alive ? 'Alive' : 'Crashed'} · {rider.controlPreset.toUpperCase()}</div>
+              <div className="mt-1 text-black/55">Powerup: <span className="font-medium text-black">{rider.carriedPowerup ?? 'none'}</span></div>
+              <div className="mt-1 text-black/55">Ghost: <span className="font-medium text-black">{rider.ghostActive ? 'active' : 'off'}</span></div>
             </div>
           ))}
         </div>

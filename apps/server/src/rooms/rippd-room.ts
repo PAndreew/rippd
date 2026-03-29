@@ -8,7 +8,9 @@ import {
   PLAYER_COLORS,
   PlayerSeat,
   RamsesAction,
-  ZatackaControlInput
+  ZatackaControlInput,
+  ZatackaSettingsUpdate,
+  ZatackaUsePowerupInput
 } from '@rippd/shared';
 import { config } from '../config';
 import { recordRoomEvent } from '../db';
@@ -16,6 +18,7 @@ import {
   InternalRamsesGame,
   InternalZatackaGame,
   applyZatackaInput,
+  applyZatackaSettings,
   buildRamsesSnapshot,
   buildZatackaSnapshot,
   createRamsesGame,
@@ -26,7 +29,8 @@ import {
   startRamses,
   startZatacka,
   syncLobbyRiders,
-  tickZatacka
+  tickZatacka,
+  useZatackaPowerup
 } from '../games';
 import { clearReconnectSession, setReconnectSession, setRoomPresence } from '../presence-store';
 
@@ -65,6 +69,12 @@ export class RippdRoom extends Room {
       this.broadcastSnapshot();
     });
 
+    this.onMessage('room:updateZatackaSettings', (_client, payload: ZatackaSettingsUpdate) => {
+      if (this.game !== 'zatacka' || this.gameState.type !== 'zatacka') return;
+      applyZatackaSettings(this.gameState, payload);
+      this.broadcastSnapshot();
+    });
+
     this.onMessage('room:pauseGame', () => {
       if (this.game !== 'zatacka' || this.gameState.type !== 'zatacka') return;
       if (this.gameState.phase !== 'running' && this.gameState.phase !== 'countdown') return;
@@ -92,6 +102,13 @@ export class RippdRoom extends Room {
       const ownsPlayer = (this.sessionLocalPlayers.get(client.sessionId) ?? []).includes(payload.playerId);
       if (!ownsPlayer) return;
       applyZatackaInput(this.gameState, payload.playerId, payload.steering);
+    });
+
+    this.onMessage('zatacka:usePowerup', (client, payload: ZatackaUsePowerupInput) => {
+      if (this.game !== 'zatacka' || this.gameState.type !== 'zatacka') return;
+      const ownsPlayer = (this.sessionLocalPlayers.get(client.sessionId) ?? []).includes(payload.playerId);
+      if (!ownsPlayer) return;
+      if (useZatackaPowerup(this.gameState, payload.playerId)) this.broadcastSnapshot();
     });
 
     this.onMessage('ramses:action', async (client, payload: RamsesAction) => {

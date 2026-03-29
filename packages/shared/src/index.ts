@@ -54,11 +54,11 @@ export const GAME_THEME: Record<
   }
 };
 
-export const CONTROL_KEYSETS: Record<ControlPreset, { left: string; right: string }> = {
-  arrows: { left: 'arrowleft', right: 'arrowright' },
-  wasd: { left: 'a', right: 'd' },
-  tfgh: { left: 'f', right: 'h' },
-  ijkl: { left: 'j', right: 'l' }
+export const CONTROL_KEYSETS: Record<ControlPreset, { left: string; right: string; action: string }> = {
+  arrows: { left: 'arrowleft', right: 'arrowright', action: 'arrowup' },
+  wasd: { left: 'a', right: 'd', action: 'w' },
+  tfgh: { left: 'f', right: 'h', action: 't' },
+  ijkl: { left: 'j', right: 'l', action: 'i' }
 };
 
 export type TreasureColor = 'tomato' | 'gold' | 'deepskyblue' | 'mediumspringgreen' | 'orchid' | 'coral';
@@ -95,6 +95,20 @@ export type ZatackaControlInput = {
   steering: -1 | 0 | 1;
 };
 
+export type ZatackaPowerupKind = 'bomb' | 'ghost';
+
+export type ZatackaSettings = {
+  speed: number;
+  walls: boolean;
+  gaps: boolean;
+};
+
+export type ZatackaSettingsUpdate = Partial<ZatackaSettings>;
+
+export type ZatackaUsePowerupInput = {
+  playerId: string;
+};
+
 export type RamsesAction =
   | { type: 'slide'; x: number; y: number }
   | { type: 'move'; x: number; y: number };
@@ -111,8 +125,16 @@ export type ZatackaRiderState = {
 export type ZatackaTrail = {
   playerId: string;
   color: string;
-  points: Point[];
+  segments: Point[][];
 };
+
+export type ZatackaPowerupPickup = {
+  id: string;
+  kind: ZatackaPowerupKind;
+  position: Point;
+};
+
+export type ZatackaSnapshotRider = ZatackaRiderState & { carriedPowerup?: ZatackaPowerupKind; ghostActive: boolean };
 
 export type ZatackaSnapshot = {
   type: 'zatacka';
@@ -120,8 +142,10 @@ export type ZatackaSnapshot = {
   width: number;
   height: number;
   round: number;
-  riders: ZatackaRiderState[];
+  riders: ZatackaSnapshotRider[];
   trails: ZatackaTrail[];
+  powerups: ZatackaPowerupPickup[];
+  settings: ZatackaSettings;
   winnerId?: string;
   countdownEndsAt?: number;
   paused: boolean;
@@ -172,7 +196,9 @@ export type SocketMessageMap = {
   'room:join': CreateOrJoinPayload;
   'room:addLocalPlayer': AddLocalPlayerPayload;
   'room:startGame': {};
+  'room:updateZatackaSettings': ZatackaSettingsUpdate;
   'zatacka:input': ZatackaControlInput;
+  'zatacka:usePowerup': ZatackaUsePowerupInput;
   'ramses:action': RamsesAction;
 };
 
