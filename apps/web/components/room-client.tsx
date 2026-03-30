@@ -225,18 +225,28 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                       <div className="font-semibold text-black">Speed</div>
                       <div className="text-xs text-black/50">1 = slow · 10 = fast</div>
                     </div>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      step={1}
-                      value={slitherGame.settings.speed}
-                      onChange={(e) => {
-                        const val = Math.round(Number(e.target.value));
-                        if (val >= 1 && val <= 10) send('room:updateSlitherSettings', { speed: val });
-                      }}
-                      className="w-16 rounded-[14px] border border-black/15 bg-transparent px-2 py-1.5 text-center text-sm font-bold text-black outline-none focus:border-black/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                    />
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => { const v = slitherGame.settings.speed - 1; if (v >= 1) send('room:updateSlitherSettings', { speed: v }); }}
+                        className="w-8 h-8 rounded-full border border-black/15 bg-white text-black font-bold text-base leading-none hover:bg-black/8 flex items-center justify-center"
+                      >−</button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={10}
+                        step={1}
+                        value={slitherGame.settings.speed}
+                        onChange={(e) => {
+                          const val = Math.round(Number(e.target.value));
+                          if (val >= 1 && val <= 10) send('room:updateSlitherSettings', { speed: val });
+                        }}
+                        className="w-12 rounded-[14px] border border-black/15 bg-white px-2 py-1.5 text-center text-sm font-bold text-black outline-none focus:border-black/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      />
+                      <button
+                        onClick={() => { const v = slitherGame.settings.speed + 1; if (v <= 10) send('room:updateSlitherSettings', { speed: v }); }}
+                        className="w-8 h-8 rounded-full border border-black/15 bg-white text-black font-bold text-base leading-none hover:bg-black/8 flex items-center justify-center"
+                      >+</button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -338,7 +348,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
 
             {/* Start / restart — bottom of card */}
             <div className="mt-auto pt-2">
-              <button onClick={startGame} className="w-full rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
+              <button onClick={startGame} className="rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
                 Start / restart
               </button>
             </div>
@@ -346,7 +356,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
 
           {/* Controls sidebar */}
           <aside id="room-sidebar" className="rounded-[34px] border border-black/10 bg-black p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
-            <div id="room-controls" className="rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
+            <div id="room-controls" className="text-sm text-white/72">
               <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Controls</div>
               <ul className="space-y-1">
                 <li>Arrows: left / right · use powerup with up</li>
@@ -356,7 +366,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
               </ul>
             </div>
             {slitherGame && slitherGame.settings.powerups && (
-              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
+              <div className="mt-4 text-sm text-white/72">
                 <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Powerups</div>
                 <ul className="space-y-2">
                   <li><span className="font-semibold text-white">Bomb:</span> blows a small hole through every trail near you.</li>
@@ -401,6 +411,13 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 {slitherGame.paused ? 'Resume' : 'Pause'}
               </button>
             )}
+            <button
+              onClick={() => send('room:stopGame', {})}
+              className="shrink-0 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-rose-500/60 hover:border-rose-400/40"
+              title="Exit game"
+            >
+              Exit
+            </button>
           </div>
 
           {/* Game canvas */}
