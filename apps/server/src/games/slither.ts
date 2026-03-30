@@ -39,6 +39,7 @@ export type InternalSlitherGame = {
   round: number;
   riders: InternalSlitherRider[];
   powerups: SlitherPowerupPickup[];
+  scores: Record<string, number>;
   winnerId?: string;
   restartAt?: number;
   startedAt?: number;
@@ -94,10 +95,12 @@ export function createSlitherGame(): InternalSlitherGame {
     riders: [],
     powerups: [],
     paused: false,
+    scores: {},
     settings: {
       speed: DEFAULT_SPEED_LEVEL,
       walls: true,
-      gaps: true
+      gaps: true,
+      powerups: true
     }
   };
 }
@@ -212,6 +215,7 @@ export function applySlitherSettings(game: InternalSlitherGame, update: SlitherS
 
   if (typeof update.walls === 'boolean') game.settings.walls = update.walls;
   if (typeof update.gaps === 'boolean') game.settings.gaps = update.gaps;
+  if (typeof update.powerups === 'boolean') game.settings.powerups = update.powerups;
 }
 
 export function startSlither(roomCode: string, game: InternalSlitherGame, players: PlayerSeat[]) {
@@ -225,6 +229,7 @@ export function startSlither(roomCode: string, game: InternalSlitherGame, player
   game.countdownEndsAt = Date.now() + 3000;
   game.nextPowerupSpawnAt = Date.now() + 4500;
   game.powerups = [];
+  players.forEach((p) => { if (!(p.id in game.scores)) game.scores[p.id] = 0; });
   game.riders = players.map((player, index) => {
     const start = positions[index];
     return {
@@ -256,7 +261,7 @@ export async function tickSlither(roomCode: string, game: InternalSlitherGame, p
   if (game.phase !== 'running') return false;
 
   const now = Date.now();
-  if (now >= (game.nextPowerupSpawnAt ?? 0)) {
+  if (game.settings.powerups && now >= (game.nextPowerupSpawnAt ?? 0)) {
     spawnPowerup(game);
     game.nextPowerupSpawnAt = now + POWERUP_SPAWN_EVERY_MS;
   }
@@ -290,7 +295,7 @@ export async function tickSlither(roomCode: string, game: InternalSlitherGame, p
       return;
     }
 
-    collectPowerup(rider, game);
+    if (game.settings.powerups) collectPowerup(rider, game);
 
     if (shouldLeaveTrail(rider, game)) {
       rider.trail.push({ x: rider.position.x, y: rider.position.y });
@@ -304,6 +309,7 @@ export async function tickSlither(roomCode: string, game: InternalSlitherGame, p
   if (alive.length <= 1) {
     game.phase = 'round-over';
     game.winnerId = alive[0]?.id;
+    if (game.winnerId) game.scores[game.winnerId] = (game.scores[game.winnerId] ?? 0) + 1;
     game.restartAt = Date.now() + 2200;
     await recordMatchSummary({
       roomId: roomCode,
@@ -373,6 +379,7 @@ export function buildSlitherSnapshot(game: InternalSlitherGame): SlitherSnapshot
     })),
     powerups: [...game.powerups],
     settings: { ...game.settings },
+    scores: { ...game.scores },
     winnerId: game.winnerId,
     countdownEndsAt: game.countdownEndsAt,
     paused: game.paused

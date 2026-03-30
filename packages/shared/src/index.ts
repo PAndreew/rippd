@@ -101,6 +101,7 @@ export type SlitherSettings = {
   speed: number;
   walls: boolean;
   gaps: boolean;
+  powerups: boolean;
 };
 
 export type SlitherSettingsUpdate = Partial<SlitherSettings>;
@@ -146,6 +147,7 @@ export type SlitherSnapshot = {
   trails: SlitherTrail[];
   powerups: SlitherPowerupPickup[];
   settings: SlitherSettings;
+  scores: Record<string, number>;
   winnerId?: string;
   countdownEndsAt?: number;
   paused: boolean;

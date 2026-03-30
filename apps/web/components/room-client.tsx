@@ -67,10 +67,6 @@ function storageKey(roomCode: string) {
   return `rippd:reconnect:${roomCode}`;
 }
 
-function RoomBadge({ children, tone }: { children: React.ReactNode; tone: string }) {
-  return <span className={`pill-badge ${tone}`}>{children}</span>;
-}
-
 export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; nickname: string; initialGame?: string }) {
   const roomRef = useRef<Room | null>(null);
   const [snapshot, setSnapshot] = useState<ClientRoomSnapshot | null>(null);
@@ -157,14 +153,11 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
     return `${window.location.origin}/room/${roomId}?game=${game}`;
   }, [initialGame, roomId, snapshot?.game]);
 
-  const gameWrapperRef = useRef<HTMLDivElement>(null);
-
   const send = (type: string, payload: unknown) => {
     roomRef.current?.send(type, payload);
   };
 
   const startGame = () => {
-    gameWrapperRef.current?.requestFullscreen().catch(() => {});
     send('room:startGame', {});
   };
 
@@ -184,6 +177,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
   };
 
   const slitherGame = snapshot?.game === 'slither' && snapshot.gameState.type === 'slither' ? snapshot.gameState : null;
+  const gameIsActive = slitherGame ? slitherGame.phase !== 'lobby' : false;
 
   if (joining && !snapshot) {
     return (
@@ -197,7 +191,6 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
   }
 
   const activeGame = snapshot?.game ?? ((initialGame as GameKind | undefined) ?? 'slither');
-  const theme = GAME_THEME[activeGame];
   const gameName = snapshot ? GAME_CONFIG[snapshot.game].name : GAME_CONFIG[activeGame].name;
 
   return (
@@ -214,36 +207,19 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/64 sm:text-base">
             {GAME_CONFIG[activeGame].description}
           </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {theme.badgeClasses.map((badge, index) => (
-              <RoomBadge key={badge} tone={CATEGORY_BADGE_TONES_LIGHT[index % CATEGORY_BADGE_TONES_LIGHT.length]}>
-                {badge}
-              </RoomBadge>
-            ))}
-            {user ? <RoomBadge tone="border-white/14 bg-white/8 text-white">Signed in</RoomBadge> : <RoomBadge tone="border-white/14 bg-white/8 text-white">Guest mode</RoomBadge>}
-          </div>
         </header>
 
-        <div id="room-quick-actions" className="rounded-[30px] bg-[#ece8ff] p-5 text-black">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Quick actions</div>
-              <div id="room-action-buttons" className="mt-4 flex flex-wrap gap-3">
-                <button onClick={addLocalPlayer} className="rounded-full border-2 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
-                  Add local player
-                </button>
-                <button onClick={startGame} className="rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/10">
-                  Start / restart
-                </button>
-                {slitherGame && (slitherGame.phase === 'running' || slitherGame.phase === 'countdown') && (
-                  <button onClick={() => send('room:pauseGame', {})} className="rounded-full border-2 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
-                    {slitherGame.paused ? 'Resume' : 'Pause'}
-                  </button>
-                )}
-              </div>
+        {error ? <div className="rounded-[24px] border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-rose-900">{error}</div> : null}
 
-              {slitherGame && (
-                <>
-                  <div className="mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Slither settings</div>
-                  <div className="mt-3 rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm text-black/70">
+        <section className="grid gap-6 xl:grid-cols-[1fr_260px]">
+          {/* Settings + players card */}
+          <div className="rounded-[30px] bg-[#ece8ff] p-5 text-black flex flex-col gap-5">
+
+            {/* Slither settings */}
+            {slitherGame && (
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Settings</div>
+                <div className="mt-3 rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm text-black/70 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Speed</div>
@@ -262,7 +238,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                       className="w-16 rounded-[14px] border border-black/15 bg-transparent px-2 py-1.5 text-center text-sm font-bold text-black outline-none focus:border-black/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                   </div>
-                  <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Walls</div>
                       <div className="text-xs">{slitherGame.settings.walls ? 'Crash at edge' : 'Wrap around'}</div>
@@ -272,7 +248,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                       onChange={() => send('room:updateSlitherSettings', { walls: !slitherGame.settings.walls })}
                     />
                   </div>
-                  <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Gaps</div>
                       <div className="text-xs">{slitherGame.settings.gaps ? 'Gaps in trails' : 'Solid trails'}</div>
@@ -282,83 +258,93 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                       onChange={() => send('room:updateSlitherSettings', { gaps: !slitherGame.settings.gaps })}
                     />
                   </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-black">Powerups</div>
+                      <div className="text-xs">{slitherGame.settings.powerups ? 'Enabled' : 'Disabled'}</div>
+                    </div>
+                    <ToggleSwitch
+                      checked={slitherGame.settings.powerups}
+                      onChange={() => send('room:updateSlitherSettings', { powerups: !slitherGame.settings.powerups })}
+                    />
                   </div>
-                </>
-              )}
-
-              <div id="room-players" className="mt-5">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Players</div>
-                <div className="mt-3 space-y-2">
-                  {snapshot?.players.map((player) => {
-                    const isLocal = snapshot.viewer.localPlayerIds.includes(player.id);
-                    const riderState = slitherGame?.riders.find((rider) => rider.id === player.id);
-                    return (
-                      <div key={player.id} className="rounded-[20px] border border-black/10 bg-white/60 px-4 py-3 text-sm">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 font-semibold text-black min-w-0">
-                            <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: player.color }} />
-                            {isLocal ? (
-                              <input
-                                key={player.id}
-                                defaultValue={player.name}
-                                maxLength={32}
-                                onBlur={(e) => {
-                                  const name = e.target.value.trim();
-                                  if (name && name !== player.name) send('room:renamePlayer', { playerId: player.id, name });
-                                  else e.target.value = player.name;
-                                }}
-                                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                                className="min-w-0 flex-1 bg-transparent outline-none border-b border-black/20 focus:border-black/60 text-black font-semibold"
-                              />
-                            ) : (
-                              <span>{player.name}</span>
-                            )}
-                          </div>
-                          <span className="text-xs uppercase tracking-[0.18em] text-black/40 shrink-0">{player.controlPreset}</span>
-                        </div>
-                        <div className="mt-1 text-black/50">{isLocal ? 'This device · tap name to rename' : 'Remote player'}</div>
-                        {riderState && (
-                          <div className="mt-1 text-black/55">
-                            Powerup: <span className="font-medium text-black">{riderState.carriedPowerup ?? 'none'}</span>
-                            {riderState.ghostActive ? ' · ghost active' : ''}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
+            )}
 
-              <div id="room-invite" className="mt-5">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Invite link</div>
-                <div className="mt-2 flex items-start gap-2">
-                  <div className="min-w-0 break-all text-sm text-black/55">{shareUrl}</div>
-                  <button
-                    onClick={copyInvite}
-                    className="shrink-0 rounded-full bg-black/8 p-2 text-black/60 hover:bg-black/15 hover:text-black"
-                    title="Copy invite link"
-                  >
-                    {copied ? <CheckIcon /> : <ClipboardIcon />}
-                  </button>
-                </div>
+            {/* Players */}
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Players</div>
+                <button onClick={addLocalPlayer} className="rounded-full border border-black/20 px-3 py-1 text-xs font-black uppercase tracking-[0.1em] text-black hover:bg-black/8">
+                  + Add player
+                </button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {snapshot?.players.map((player) => {
+                  const isLocal = snapshot.viewer.localPlayerIds.includes(player.id);
+                  const riderState = slitherGame?.riders.find((rider) => rider.id === player.id);
+                  return (
+                    <div key={player.id} className="rounded-[20px] border border-black/10 bg-white/60 px-4 py-3 text-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 font-semibold text-black min-w-0">
+                          <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: player.color }} />
+                          {isLocal ? (
+                            <input
+                              key={player.id}
+                              defaultValue={player.name}
+                              maxLength={32}
+                              onBlur={(e) => {
+                                const name = e.target.value.trim();
+                                if (name && name !== player.name) send('room:renamePlayer', { playerId: player.id, name });
+                                else e.target.value = player.name;
+                              }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                              className="min-w-0 flex-1 bg-transparent outline-none border-b border-black/20 focus:border-black/60 text-black font-semibold"
+                            />
+                          ) : (
+                            <span>{player.name}</span>
+                          )}
+                        </div>
+                        <span className="text-xs uppercase tracking-[0.18em] text-black/40 shrink-0">{player.controlPreset}</span>
+                      </div>
+                      <div className="mt-1 text-black/50">{isLocal ? 'This device · tap name to rename' : 'Remote player'}</div>
+                      {riderState && (
+                        <div className="mt-1 text-black/55">
+                          Powerup: <span className="font-medium text-black">{riderState.carriedPowerup ?? 'none'}</span>
+                          {riderState.ghostActive ? ' · ghost active' : ''}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-        {error ? <div className="rounded-[24px] border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-rose-900">{error}</div> : null}
+            {/* Invite link */}
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Invite link</div>
+              <div className="mt-2 flex items-start gap-2">
+                <div className="min-w-0 break-all text-sm text-black/55">{shareUrl}</div>
+                <button
+                  onClick={copyInvite}
+                  className="shrink-0 rounded-full bg-black/8 p-2 text-black/60 hover:bg-black/15 hover:text-black"
+                  title="Copy invite link"
+                >
+                  {copied ? <CheckIcon /> : <ClipboardIcon />}
+                </button>
+              </div>
+            </div>
 
-        <section id="room-game-section" className="grid gap-6 xl:grid-cols-[1fr_260px]">
-          <div id="room-game-board" ref={gameWrapperRef} className="rounded-[34px] border border-black/10 bg-white/30 p-3 shadow-[0_24px_60px_rgba(25,18,53,0.12)] backdrop-blur-md sm:p-4">
-            {snapshot?.game === 'slither' ? (
-              <SlitherView
-                snapshot={snapshot}
-                onInput={(input: SlitherControlInput) => send('slither:input', input)}
-                onUsePowerup={(input: SlitherUsePowerupInput) => send('slither:usePowerup', input)}
-              />
-            ) : snapshot?.game === 'ramses' ? (
-              <RamsesView snapshot={snapshot} onAction={(action: RamsesAction) => send('ramses:action', action)} />
-            ) : null}
+            {/* Start / restart — bottom of card */}
+            <div className="mt-auto pt-2">
+              <button onClick={startGame} className="w-full rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
+                Start / restart
+              </button>
+            </div>
           </div>
 
+          {/* Controls sidebar */}
           <aside id="room-sidebar" className="rounded-[34px] border border-black/10 bg-black p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
             <div id="room-controls" className="rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
               <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Controls</div>
@@ -369,7 +355,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <li>IJKL: J / L · use powerup with I</li>
               </ul>
             </div>
-            {slitherGame && (
+            {slitherGame && slitherGame.settings.powerups && (
               <div className="mt-4 rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
                 <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Powerups</div>
                 <ul className="space-y-2">
@@ -382,6 +368,55 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
           </aside>
         </section>
       </div>
+
+      {/* Full-window game overlay */}
+      {snapshot && gameIsActive && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#060606]">
+          {/* HUD bar */}
+          <div className="flex items-center gap-4 border-b border-white/10 px-5 py-3">
+            <div className="text-xs font-bold uppercase tracking-[0.14em] text-white/50">
+              Round {slitherGame?.round ?? 1}
+            </div>
+            <div className="flex flex-1 flex-wrap gap-3">
+              {snapshot.players.map((player) => {
+                const rider = slitherGame?.riders.find((r) => r.id === player.id);
+                const score = slitherGame?.scores?.[player.id] ?? 0;
+                return (
+                  <div key={player.id} className={`flex items-center gap-2 rounded-full px-3 py-1 ${rider?.alive === false ? 'opacity-40' : ''}`} style={{ background: player.color + '22', border: `1px solid ${player.color}55` }}>
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: player.color }} />
+                    <span className="text-sm font-semibold text-white">{player.name}</span>
+                    {rider?.carriedPowerup && (
+                      <span className="text-xs text-white/60">{rider.ghostActive ? '👻' : rider.carriedPowerup === 'bomb' ? '💣' : '⚡'}</span>
+                    )}
+                    <span className="text-xs font-bold text-white/50">{score}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {slitherGame && (slitherGame.phase === 'running' || slitherGame.phase === 'countdown') && (
+              <button
+                onClick={() => send('room:pauseGame', {})}
+                className="shrink-0 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-white/20"
+              >
+                {slitherGame.paused ? 'Resume' : 'Pause'}
+              </button>
+            )}
+          </div>
+
+          {/* Game canvas */}
+          <div className="relative flex-1 min-h-0">
+            {snapshot.game === 'slither' ? (
+              <SlitherView
+                snapshot={snapshot}
+                onInput={(input: SlitherControlInput) => send('slither:input', input)}
+                onUsePowerup={(input: SlitherUsePowerupInput) => send('slither:usePowerup', input)}
+              />
+            ) : snapshot.game === 'ramses' ? (
+              <RamsesView snapshot={snapshot} onAction={(action: RamsesAction) => send('ramses:action', action)} />
+            ) : null}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
