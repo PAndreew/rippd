@@ -5,16 +5,16 @@ import {
   Point,
   randomFrom,
   wrapAngle,
-  ZatackaPowerupKind,
-  ZatackaPowerupPickup,
-  ZatackaSettings,
-  ZatackaSettingsUpdate,
-  ZatackaSnapshot
+  SlitherPowerupKind,
+  SlitherPowerupPickup,
+  SlitherSettings,
+  SlitherSettingsUpdate,
+  SlitherSnapshot
 } from '@rippd/shared';
 import { nanoid } from 'nanoid';
 import { recordMatchSummary, recordRoomEvent } from '../db';
 
-export type InternalZatackaRider = {
+export type InternalSlitherRider = {
   id: string;
   name: string;
   color: string;
@@ -27,25 +27,25 @@ export type InternalZatackaRider = {
   trail: { x: number; y: number }[];
   trailTicks: number;
   gapOffset: number;
-  carriedPowerup?: ZatackaPowerupKind;
+  carriedPowerup?: SlitherPowerupKind;
   ghostUntil?: number;
 };
 
-export type InternalZatackaGame = {
-  type: 'zatacka';
+export type InternalSlitherGame = {
+  type: 'slither';
   phase: 'lobby' | 'countdown' | 'running' | 'round-over';
   width: number;
   height: number;
   round: number;
-  riders: InternalZatackaRider[];
-  powerups: ZatackaPowerupPickup[];
+  riders: InternalSlitherRider[];
+  powerups: SlitherPowerupPickup[];
   winnerId?: string;
   restartAt?: number;
   startedAt?: number;
   countdownEndsAt?: number;
   nextPowerupSpawnAt?: number;
   paused: boolean;
-  settings: ZatackaSettings;
+  settings: SlitherSettings;
 };
 
 const DEFAULT_SPEED_LEVEL = 5; // 1–10 integer; level 5 ≈ 3.9 px/tick
@@ -67,7 +67,7 @@ const BOMB_RADIUS_SQ = 46 * 46;
 const GHOST_DURATION_MS = 4000;
 const SEGMENT_BREAK_DISTANCE_SQ = 20 * 20;
 
-function createInternalRider(seat: PlayerSeat, index: number): InternalZatackaRider {
+function createInternalRider(seat: PlayerSeat, index: number): InternalSlitherRider {
   return {
     id: seat.id,
     name: seat.name,
@@ -84,9 +84,9 @@ function createInternalRider(seat: PlayerSeat, index: number): InternalZatackaRi
   };
 }
 
-export function createZatackaGame(): InternalZatackaGame {
+export function createSlitherGame(): InternalSlitherGame {
   return {
-    type: 'zatacka',
+    type: 'slither',
     phase: 'lobby',
     width: 960,
     height: 600,
@@ -102,7 +102,7 @@ export function createZatackaGame(): InternalZatackaGame {
   };
 }
 
-export function syncLobbyRiders(game: InternalZatackaGame, players: PlayerSeat[]) {
+export function syncLobbyRiders(game: InternalSlitherGame, players: PlayerSeat[]) {
   game.riders = players.map((seat, index) => createInternalRider(seat, index));
 }
 
@@ -120,16 +120,16 @@ function sampleCirclePositions(count: number, width: number, height: number) {
   });
 }
 
-function hasGhost(rider: InternalZatackaRider, now: number) {
+function hasGhost(rider: InternalSlitherRider, now: number) {
   return (rider.ghostUntil ?? 0) > now;
 }
 
-function shouldLeaveTrail(rider: InternalZatackaRider, game: InternalZatackaGame) {
+function shouldLeaveTrail(rider: InternalSlitherRider, game: InternalSlitherGame) {
   if (!game.settings.gaps) return true;
   return ((rider.trailTicks + rider.gapOffset) % GAP_CYCLE_TICKS) >= GAP_OPEN_TICKS;
 }
 
-function hitsTrail(x: number, y: number, riders: InternalZatackaRider[], selfId: string, now: number): boolean {
+function hitsTrail(x: number, y: number, riders: InternalSlitherRider[], selfId: string, now: number): boolean {
   for (const rider of riders) {
     if (hasGhost(rider, now)) continue;
     const trail = rider.trail;
@@ -164,13 +164,13 @@ function splitTrailIntoSegments(points: Point[]) {
   return segments;
 }
 
-function spawnPowerup(game: InternalZatackaGame) {
+function spawnPowerup(game: InternalSlitherGame) {
   if (game.powerups.length >= MAX_POWERUPS_ON_BOARD) return;
 
   const margin = 50;
   game.powerups.push({
     id: nanoid(8),
-    kind: randomFrom<ZatackaPowerupKind>(['bomb', 'ghost']),
+    kind: randomFrom<SlitherPowerupKind>(['bomb', 'ghost']),
     position: {
       x: margin + Math.random() * (game.width - margin * 2),
       y: margin + Math.random() * (game.height - margin * 2)
@@ -178,7 +178,7 @@ function spawnPowerup(game: InternalZatackaGame) {
   });
 }
 
-function collectPowerup(rider: InternalZatackaRider, game: InternalZatackaGame) {
+function collectPowerup(rider: InternalSlitherRider, game: InternalSlitherGame) {
   const index = game.powerups.findIndex((powerup) => {
     const dx = rider.position.x - powerup.position.x;
     const dy = rider.position.y - powerup.position.y;
@@ -191,7 +191,7 @@ function collectPowerup(rider: InternalZatackaRider, game: InternalZatackaGame) 
   return true;
 }
 
-function carveTrailHole(game: InternalZatackaGame, center: Point, radiusSq: number) {
+function carveTrailHole(game: InternalSlitherGame, center: Point, radiusSq: number) {
   game.riders.forEach((rider) => {
     rider.trail = rider.trail.filter((point) => {
       const dx = point.x - center.x;
@@ -201,7 +201,7 @@ function carveTrailHole(game: InternalZatackaGame, center: Point, radiusSq: numb
   });
 }
 
-export function applyZatackaSettings(game: InternalZatackaGame, update: ZatackaSettingsUpdate) {
+export function applySlitherSettings(game: InternalSlitherGame, update: SlitherSettingsUpdate) {
   if (typeof update.speed === 'number' && Number.isFinite(update.speed)) {
     game.settings.speed = clamp(Math.round(update.speed), MIN_SPEED_LEVEL, MAX_SPEED_LEVEL);
     const px = speedFromLevel(game.settings.speed);
@@ -214,7 +214,7 @@ export function applyZatackaSettings(game: InternalZatackaGame, update: ZatackaS
   if (typeof update.gaps === 'boolean') game.settings.gaps = update.gaps;
 }
 
-export function startZatacka(roomCode: string, game: InternalZatackaGame, players: PlayerSeat[]) {
+export function startSlither(roomCode: string, game: InternalSlitherGame, players: PlayerSeat[]) {
   const positions = sampleCirclePositions(players.length || 1, game.width, game.height);
   game.phase = 'countdown';
   game.paused = false;
@@ -235,10 +235,10 @@ export function startZatacka(roomCode: string, game: InternalZatackaGame, player
       alive: true
     };
   });
-  void recordRoomEvent({ roomId: roomCode, gameKind: 'zatacka', eventType: 'match_started', payload: { players: players.length, round: game.round } });
+  void recordRoomEvent({ roomId: roomCode, gameKind: 'slither', eventType: 'match_started', payload: { players: players.length, round: game.round } });
 }
 
-export async function tickZatacka(roomCode: string, game: InternalZatackaGame, playerCount: number) {
+export async function tickSlither(roomCode: string, game: InternalSlitherGame, playerCount: number) {
   if (game.paused) return true;
 
   if (game.phase === 'countdown') {
@@ -307,7 +307,7 @@ export async function tickZatacka(roomCode: string, game: InternalZatackaGame, p
     game.restartAt = Date.now() + 2200;
     await recordMatchSummary({
       roomId: roomCode,
-      gameKind: 'zatacka',
+      gameKind: 'slither',
       winnerPlayerId: game.winnerId,
       playerCount,
       startedAt: game.startedAt ? new Date(game.startedAt) : undefined,
@@ -320,21 +320,21 @@ export async function tickZatacka(roomCode: string, game: InternalZatackaGame, p
   return true;
 }
 
-export function maybeRestartZatacka(roomCode: string, game: InternalZatackaGame, players: PlayerSeat[]) {
+export function maybeRestartSlither(roomCode: string, game: InternalSlitherGame, players: PlayerSeat[]) {
   if (game.phase === 'round-over' && game.restartAt && Date.now() >= game.restartAt && players.length >= 2) {
-    startZatacka(roomCode, game, players);
+    startSlither(roomCode, game, players);
     return true;
   }
   return false;
 }
 
-export function applyZatackaInput(game: InternalZatackaGame, playerId: string, steering: -1 | 0 | 1) {
+export function applySlitherInput(game: InternalSlitherGame, playerId: string, steering: -1 | 0 | 1) {
   const rider = game.riders.find((entry) => entry.id === playerId);
   if (!rider) return;
   rider.steering = clamp(steering, -1, 1) as -1 | 0 | 1;
 }
 
-export function useZatackaPowerup(game: InternalZatackaGame, playerId: string) {
+export function useSlitherPowerup(game: InternalSlitherGame, playerId: string) {
   const rider = game.riders.find((entry) => entry.id === playerId && entry.alive);
   if (!rider?.carriedPowerup) return false;
 
@@ -348,10 +348,10 @@ export function useZatackaPowerup(game: InternalZatackaGame, playerId: string) {
   return true;
 }
 
-export function buildZatackaSnapshot(game: InternalZatackaGame): ZatackaSnapshot {
+export function buildSlitherSnapshot(game: InternalSlitherGame): SlitherSnapshot {
   const now = Date.now();
   return {
-    type: 'zatacka',
+    type: 'slither',
     phase: game.phase,
     width: game.width,
     height: game.height,

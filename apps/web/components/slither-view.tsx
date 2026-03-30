@@ -1,23 +1,23 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ClientRoomSnapshot, CONTROL_KEYSETS, ZatackaControlInput, ZatackaUsePowerupInput } from '@rippd/shared';
+import { ClientRoomSnapshot, CONTROL_KEYSETS, SlitherControlInput, SlitherUsePowerupInput } from '@rippd/shared';
 
-export function ZatackaView({
+export function SlitherView({
   snapshot,
   onInput,
   onUsePowerup
 }: {
   snapshot: ClientRoomSnapshot;
-  onInput: (input: ZatackaControlInput) => void;
-  onUsePowerup: (input: ZatackaUsePowerupInput) => void;
+  onInput: (input: SlitherControlInput) => void;
+  onUsePowerup: (input: SlitherUsePowerupInput) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [countdownSecs, setCountdownSecs] = useState<number | null>(null);
   const [showGo, setShowGo] = useState(false);
-  const game = snapshot.gameState.type === 'zatacka' ? snapshot.gameState : null;
+  const game = snapshot.gameState.type === 'slither' ? snapshot.gameState : null;
 
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -245,7 +245,7 @@ export function ZatackaView({
                 textShadow: showGo ? '0 0 60px rgba(52,211,153,0.8)' : '0 0 40px rgba(255,255,255,0.5)',
                 lineHeight: 1,
                 letterSpacing: '-0.06em',
-                animation: 'zatacka-pop 0.25s ease-out'
+                animation: 'slither-pop 0.25s ease-out'
               }}
             >
               {showGo ? 'GO!' : countdownSecs}
@@ -324,7 +324,7 @@ export function ZatackaView({
       )}
 
       <style>{`
-        @keyframes zatacka-pop {
+        @keyframes slither-pop {
           from { transform: scale(1.4); opacity: 0; }
           to   { transform: scale(1);   opacity: 1; }
         }

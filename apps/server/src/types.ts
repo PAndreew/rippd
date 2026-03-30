@@ -1,6 +1,6 @@
-import { GameKind, PlayerSeat, RamsesSnapshot, ZatackaSnapshot } from '@rippd/shared';
+import { GameKind, PlayerSeat, RamsesSnapshot, SlitherSnapshot } from '@rippd/shared';
 
-export type InternalSnapshot = ZatackaSnapshot | RamsesSnapshot;
+export type InternalSnapshot = SlitherSnapshot | RamsesSnapshot;
 
 export type RoomPlayerState = PlayerSeat;
 

@@ -8,29 +8,29 @@ import {
   PLAYER_COLORS,
   PlayerSeat,
   RamsesAction,
-  ZatackaControlInput,
-  ZatackaSettingsUpdate,
-  ZatackaUsePowerupInput
+  SlitherControlInput,
+  SlitherSettingsUpdate,
+  SlitherUsePowerupInput
 } from '@rippd/shared';
 import { config } from '../config';
 import { recordRoomEvent } from '../db';
 import {
   InternalRamsesGame,
-  InternalZatackaGame,
-  applyZatackaInput,
-  applyZatackaSettings,
+  InternalSlitherGame,
+  applySlitherInput,
+  applySlitherSettings,
   buildRamsesSnapshot,
-  buildZatackaSnapshot,
+  buildSlitherSnapshot,
   createRamsesGame,
-  createZatackaGame,
+  createSlitherGame,
   currentRamsesPlayerId,
   handleRamsesAction,
-  maybeRestartZatacka,
+  maybeRestartSlither,
   startRamses,
-  startZatacka,
+  startSlither,
   syncLobbyRiders,
-  tickZatacka,
-  useZatackaPowerup
+  tickSlither,
+  useSlitherPowerup
 } from '../games';
 import { clearReconnectSession, setReconnectSession, setRoomPresence } from '../presence-store';
 
@@ -38,17 +38,17 @@ export class RippdRoom extends Room {
   maxClients = 32;
 
   private roomCode = '';
-  private game: GameKind = 'zatacka';
+  private game: GameKind = 'slither';
   private hostSessionId = '';
   private players: PlayerSeat[] = [];
   private sessionLocalPlayers = new Map<string, string[]>();
   private sessionToSocket = new Map<string, string>();
-  private gameState: InternalZatackaGame | InternalRamsesGame = createZatackaGame();
+  private gameState: InternalSlitherGame | InternalRamsesGame = createSlitherGame();
 
   async onCreate(options: { roomCode: string; game: GameKind }) {
     this.roomCode = String(options.roomCode || '').toUpperCase();
-    this.game = options.game ?? 'zatacka';
-    this.gameState = this.game === 'zatacka' ? createZatackaGame() : createRamsesGame([]);
+    this.game = options.game ?? 'slither';
+    this.gameState = this.game === 'slither' ? createSlitherGame() : createRamsesGame([]);
 
     await this.setMetadata({ roomCode: this.roomCode, game: this.game });
     this.onMessage('room:addLocalPlayer', async (client, payload: AddLocalPlayerPayload) => {
@@ -61,22 +61,22 @@ export class RippdRoom extends Room {
         client.send('room:error', 'You need at least 2 players in the room.');
         return;
       }
-      if (this.game === 'zatacka' && this.gameState.type === 'zatacka') {
-        startZatacka(this.roomCode, this.gameState, this.players);
+      if (this.game === 'slither' && this.gameState.type === 'slither') {
+        startSlither(this.roomCode, this.gameState, this.players);
       } else {
         this.gameState = startRamses(this.roomCode, this.players);
       }
       this.broadcastSnapshot();
     });
 
-    this.onMessage('room:updateZatackaSettings', (_client, payload: ZatackaSettingsUpdate) => {
-      if (this.game !== 'zatacka' || this.gameState.type !== 'zatacka') return;
-      applyZatackaSettings(this.gameState, payload);
+    this.onMessage('room:updateSlitherSettings', (_client, payload: SlitherSettingsUpdate) => {
+      if (this.game !== 'slither' || this.gameState.type !== 'slither') return;
+      applySlitherSettings(this.gameState, payload);
       this.broadcastSnapshot();
     });
 
     this.onMessage('room:pauseGame', () => {
-      if (this.game !== 'zatacka' || this.gameState.type !== 'zatacka') return;
+      if (this.game !== 'slither' || this.gameState.type !== 'slither') return;
       if (this.gameState.phase !== 'running' && this.gameState.phase !== 'countdown') return;
       this.gameState.paused = !this.gameState.paused;
       this.broadcastSnapshot();
@@ -90,25 +90,25 @@ export class RippdRoom extends Room {
       const name = String(payload.name ?? '').trim().slice(0, 32);
       if (!name) return;
       player.name = name;
-      if (this.gameState.type === 'zatacka') {
+      if (this.gameState.type === 'slither') {
         const rider = this.gameState.riders.find((r) => r.id === payload.playerId);
         if (rider) rider.name = name;
       }
       this.broadcastSnapshot();
     });
 
-    this.onMessage('zatacka:input', (client, payload: ZatackaControlInput) => {
-      if (this.game !== 'zatacka' || this.gameState.type !== 'zatacka') return;
+    this.onMessage('slither:input', (client, payload: SlitherControlInput) => {
+      if (this.game !== 'slither' || this.gameState.type !== 'slither') return;
       const ownsPlayer = (this.sessionLocalPlayers.get(client.sessionId) ?? []).includes(payload.playerId);
       if (!ownsPlayer) return;
-      applyZatackaInput(this.gameState, payload.playerId, payload.steering);
+      applySlitherInput(this.gameState, payload.playerId, payload.steering);
     });
 
-    this.onMessage('zatacka:usePowerup', (client, payload: ZatackaUsePowerupInput) => {
-      if (this.game !== 'zatacka' || this.gameState.type !== 'zatacka') return;
+    this.onMessage('slither:usePowerup', (client, payload: SlitherUsePowerupInput) => {
+      if (this.game !== 'slither' || this.gameState.type !== 'slither') return;
       const ownsPlayer = (this.sessionLocalPlayers.get(client.sessionId) ?? []).includes(payload.playerId);
       if (!ownsPlayer) return;
-      if (useZatackaPowerup(this.gameState, payload.playerId)) this.broadcastSnapshot();
+      if (useSlitherPowerup(this.gameState, payload.playerId)) this.broadcastSnapshot();
     });
 
     this.onMessage('ramses:action', async (client, payload: RamsesAction) => {
@@ -121,9 +121,9 @@ export class RippdRoom extends Room {
     });
 
     this.setSimulationInterval(async () => {
-      if (this.game === 'zatacka' && this.gameState.type === 'zatacka') {
-        const changed = await tickZatacka(this.roomCode, this.gameState, this.players.length);
-        const restarted = maybeRestartZatacka(this.roomCode, this.gameState, this.players);
+      if (this.game === 'slither' && this.gameState.type === 'slither') {
+        const changed = await tickSlither(this.roomCode, this.gameState, this.players.length);
+        const restarted = maybeRestartSlither(this.roomCode, this.gameState, this.players);
         if (changed || restarted) this.broadcastSnapshot();
       }
     }, 50);
@@ -188,7 +188,7 @@ export class RippdRoom extends Room {
     this.players.push(player);
     this.sessionLocalPlayers.set(client.sessionId, [...localIds, player.id]);
 
-    if (this.game === 'zatacka' && this.gameState.type === 'zatacka') {
+    if (this.game === 'slither' && this.gameState.type === 'slither') {
       syncLobbyRiders(this.gameState, this.players);
     } else if (this.game === 'ramses') {
       this.gameState = createRamsesGame(this.players);
@@ -211,10 +211,10 @@ export class RippdRoom extends Room {
       this.hostSessionId = this.sessionLocalPlayers.keys().next().value ?? '';
     }
 
-    if (this.game === 'zatacka' && this.gameState.type === 'zatacka') {
-      this.gameState = createZatackaGame();
+    if (this.game === 'slither' && this.gameState.type === 'slither') {
+      this.gameState = createSlitherGame();
       syncLobbyRiders(this.gameState, this.players);
-      if (this.players.length >= 2) startZatacka(this.roomCode, this.gameState, this.players);
+      if (this.players.length >= 2) startSlither(this.roomCode, this.gameState, this.players);
     } else {
       this.gameState = createRamsesGame(this.players);
     }
@@ -236,7 +236,7 @@ export class RippdRoom extends Room {
         socketId: this.sessionToSocket.get(sessionId) ?? '',
         localPlayerIds: this.sessionLocalPlayers.get(sessionId) ?? []
       },
-      gameState: this.gameState.type === 'zatacka' ? buildZatackaSnapshot(this.gameState) : buildRamsesSnapshot(this.gameState)
+      gameState: this.gameState.type === 'slither' ? buildSlitherSnapshot(this.gameState) : buildRamsesSnapshot(this.gameState)
     };
   }
 

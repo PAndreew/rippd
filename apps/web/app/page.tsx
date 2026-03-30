@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GAME_CONFIG, GAME_THEME, GameKind } from '@rippd/shared';
 import { CATEGORY_BADGE_TONES_LIGHT } from '@/lib/design';
@@ -452,7 +453,7 @@ function Navbar({ user, onMenuClick }: { user: AuthUser | null; onMenuClick: () 
     <div className="shell-width pt-4 sm:pt-6">
       <nav className="zen-nav-shell">
         <div className="flex items-center justify-between gap-3 sm:gap-6">
-          <RippdWordmark />
+          <Link href="/"><RippdWordmark /></Link>
           <button onClick={onMenuClick} className="zen-burger" aria-label={user ? `Open account menu for ${user.displayName}` : 'Open account menu'}>
             <span className="flex w-10 flex-col gap-2 sm:w-12">
               <span className="h-[4px] rounded-full bg-white" />

@@ -94,7 +94,7 @@ async function bootstrap() {
 
   app.post('/matchmake/join-or-create', async (req, res) => {
     try {
-      const { roomCode, game, nickname } = req.body as { roomCode: string; game: 'zatacka' | 'ramses'; nickname: string };
+      const { roomCode, game, nickname } = req.body as { roomCode: string; game: 'slither' | 'ramses'; nickname: string };
       const seatReservation = await matchMaker.joinOrCreate('rippd', {
         roomCode: String(roomCode).toUpperCase(),
         game,

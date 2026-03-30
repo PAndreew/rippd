@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Client, Room } from 'colyseus.js';
 import {
   ClientRoomSnapshot,
@@ -9,11 +10,12 @@ import {
   GAME_THEME,
   GameKind,
   RamsesAction,
-  ZatackaControlInput,
-  ZatackaUsePowerupInput
+  SlitherControlInput,
+  SlitherUsePowerupInput
 } from '@rippd/shared';
-import { ZatackaView } from '@/components/zatacka-view';
+import { SlitherView } from '@/components/slither-view';
 import { RamsesView } from '@/components/ramses-view';
+import { RippdWordmark } from '@/components/rippd-logo';
 import { CATEGORY_BADGE_TONES_LIGHT } from '@/lib/design';
 import { fetchCurrentUser, getStoredAuthToken, type AuthUser } from '@/lib/auth';
 
@@ -92,7 +94,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
       let room: Room | null = null;
       const savedRaw = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey(roomId)) : null;
       const saved = savedRaw ? (JSON.parse(savedRaw) as SavedReconnect) : null;
-      const fallbackGame = ((initialGame as GameKind | undefined) ?? saved?.game ?? 'zatacka') as GameKind;
+      const fallbackGame = ((initialGame as GameKind | undefined) ?? saved?.game ?? 'slither') as GameKind;
 
       try {
         if (saved?.roomCode === roomId && saved.sessionId && saved.roomId) {
@@ -151,7 +153,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
-    const game = snapshot?.game ?? ((initialGame as GameKind | undefined) ?? 'zatacka');
+    const game = snapshot?.game ?? ((initialGame as GameKind | undefined) ?? 'slither');
     return `${window.location.origin}/room/${roomId}?game=${game}`;
   }, [initialGame, roomId, snapshot?.game]);
 
@@ -181,7 +183,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
     setTimeout(() => setCopied(false), 1200);
   };
 
-  const zatackaGame = snapshot?.game === 'zatacka' && snapshot.gameState.type === 'zatacka' ? snapshot.gameState : null;
+  const slitherGame = snapshot?.game === 'slither' && snapshot.gameState.type === 'slither' ? snapshot.gameState : null;
 
   if (joining && !snapshot) {
     return (
@@ -194,13 +196,16 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
     );
   }
 
-  const activeGame = snapshot?.game ?? ((initialGame as GameKind | undefined) ?? 'zatacka');
+  const activeGame = snapshot?.game ?? ((initialGame as GameKind | undefined) ?? 'slither');
   const theme = GAME_THEME[activeGame];
   const gameName = snapshot ? GAME_CONFIG[snapshot.game].name : GAME_CONFIG[activeGame].name;
 
   return (
     <main className="zen-room-stage min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="shell-width flex flex-col gap-6 px-0">
+        <nav className="flex items-center">
+          <Link href="/"><RippdWordmark textClassName="sm:tracking-[-0.04em]" /></Link>
+        </nav>
         <header className="zen-nav-shell overflow-hidden">
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div>
@@ -209,7 +214,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 {gameName}
               </div>
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/64 sm:text-base">
-                Invite people with the room code, add local players for couch co-op, and manage the match with the same bold visual language as the refreshed landing page.
+                {GAME_CONFIG[activeGame].description}
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 {theme.badgeClasses.map((badge, index) => (
@@ -234,17 +239,18 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <button onClick={startGame} className="rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/10">
                   Start / restart
                 </button>
-                {zatackaGame && (zatackaGame.phase === 'running' || zatackaGame.phase === 'countdown') && (
+                {slitherGame && (slitherGame.phase === 'running' || slitherGame.phase === 'countdown') && (
                   <button onClick={() => send('room:pauseGame', {})} className="rounded-full border-2 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
-                    {zatackaGame.paused ? 'Resume' : 'Pause'}
+                    {slitherGame.paused ? 'Resume' : 'Pause'}
                   </button>
                 )}
               </div>
 
-              {zatackaGame && (
-                <div className="mt-5 rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm text-black/70">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Slither settings</div>
-                  <div className="mt-3 flex items-center justify-between gap-3">
+              {slitherGame && (
+                <>
+                  <div className="mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Slither settings</div>
+                  <div className="mt-3 rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm text-black/70">
+                  <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Speed</div>
                       <div className="text-xs text-black/50">1 = slow · 10 = fast</div>
@@ -254,10 +260,10 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                       min={1}
                       max={10}
                       step={1}
-                      value={zatackaGame.settings.speed}
+                      value={slitherGame.settings.speed}
                       onChange={(e) => {
                         const val = Math.round(Number(e.target.value));
-                        if (val >= 1 && val <= 10) send('room:updateZatackaSettings', { speed: val });
+                        if (val >= 1 && val <= 10) send('room:updateSlitherSettings', { speed: val });
                       }}
                       className="w-16 rounded-[14px] border border-black/15 bg-transparent px-2 py-1.5 text-center text-sm font-bold text-black outline-none focus:border-black/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
@@ -265,24 +271,25 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Walls</div>
-                      <div className="text-xs">{zatackaGame.settings.walls ? 'Crash at edge' : 'Wrap around'}</div>
+                      <div className="text-xs">{slitherGame.settings.walls ? 'Crash at edge' : 'Wrap around'}</div>
                     </div>
                     <ToggleSwitch
-                      checked={zatackaGame.settings.walls}
-                      onChange={() => send('room:updateZatackaSettings', { walls: !zatackaGame.settings.walls })}
+                      checked={slitherGame.settings.walls}
+                      onChange={() => send('room:updateSlitherSettings', { walls: !slitherGame.settings.walls })}
                     />
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Gaps</div>
-                      <div className="text-xs">{zatackaGame.settings.gaps ? 'Gaps in trails' : 'Solid trails'}</div>
+                      <div className="text-xs">{slitherGame.settings.gaps ? 'Gaps in trails' : 'Solid trails'}</div>
                     </div>
                     <ToggleSwitch
-                      checked={zatackaGame.settings.gaps}
-                      onChange={() => send('room:updateZatackaSettings', { gaps: !zatackaGame.settings.gaps })}
+                      checked={slitherGame.settings.gaps}
+                      onChange={() => send('room:updateSlitherSettings', { gaps: !slitherGame.settings.gaps })}
                     />
                   </div>
-                </div>
+                  </div>
+                </>
               )}
 
               <div id="room-players" className="mt-5">
@@ -290,7 +297,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <div className="mt-3 space-y-2">
                   {snapshot?.players.map((player) => {
                     const isLocal = snapshot.viewer.localPlayerIds.includes(player.id);
-                    const riderState = zatackaGame?.riders.find((rider) => rider.id === player.id);
+                    const riderState = slitherGame?.riders.find((rider) => rider.id === player.id);
                     return (
                       <div key={player.id} className="rounded-[20px] border border-black/10 bg-white/60 px-4 py-3 text-sm">
                         <div className="flex items-center justify-between gap-3">
@@ -349,11 +356,11 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
 
         <section id="room-game-section" className="grid gap-6 xl:grid-cols-[1fr_260px]">
           <div id="room-game-board" ref={gameWrapperRef} className="rounded-[34px] border border-black/10 bg-white/30 p-3 shadow-[0_24px_60px_rgba(25,18,53,0.12)] backdrop-blur-md sm:p-4">
-            {snapshot?.game === 'zatacka' ? (
-              <ZatackaView
+            {snapshot?.game === 'slither' ? (
+              <SlitherView
                 snapshot={snapshot}
-                onInput={(input: ZatackaControlInput) => send('zatacka:input', input)}
-                onUsePowerup={(input: ZatackaUsePowerupInput) => send('zatacka:usePowerup', input)}
+                onInput={(input: SlitherControlInput) => send('slither:input', input)}
+                onUsePowerup={(input: SlitherUsePowerupInput) => send('slither:usePowerup', input)}
               />
             ) : snapshot?.game === 'ramses' ? (
               <RamsesView snapshot={snapshot} onAction={(action: RamsesAction) => send('ramses:action', action)} />
@@ -370,7 +377,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <li>IJKL: J / L · use powerup with I</li>
               </ul>
             </div>
-            {zatackaGame && (
+            {slitherGame && (
               <div className="mt-4 rounded-[24px] border border-white/10 bg-white/6 p-4 text-sm text-white/72">
                 <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Powerups</div>
                 <ul className="space-y-2">

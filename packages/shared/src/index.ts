@@ -1,12 +1,12 @@
-export type GameKind = 'zatacka' | 'ramses';
+export type GameKind = 'slither' | 'ramses';
 export type ControlPreset = 'arrows' | 'wasd' | 'tfgh' | 'ijkl';
 
 export const GAME_CONFIG = {
-  zatacka: {
-    kind: 'zatacka' as const,
+  slither: {
+    kind: 'slither' as const,
     name: 'Slither',
-    tagline: 'Last rider standing',
-    description: 'Fast turn-and-burn trail duels with couch co-op keyboard presets and online rooms.'
+    tagline: 'Last snake standing',
+    description: 'A remake of Slither — leave trails, dodge your rivals, be the last snake standing.'
   },
   ramses: {
     kind: 'ramses' as const,
@@ -30,7 +30,7 @@ export const GAME_THEME: Record<
     badgeLabel: string;
   }
 > = {
-  zatacka: {
+  slither: {
     surface: '#050816',
     surfaceMuted: '#0c1533',
     contrastSurface: '#f8fafc',
@@ -90,22 +90,22 @@ export type AddLocalPlayerPayload = {
   controlPreset: ControlPreset;
 };
 
-export type ZatackaControlInput = {
+export type SlitherControlInput = {
   playerId: string;
   steering: -1 | 0 | 1;
 };
 
-export type ZatackaPowerupKind = 'bomb' | 'ghost';
+export type SlitherPowerupKind = 'bomb' | 'ghost';
 
-export type ZatackaSettings = {
+export type SlitherSettings = {
   speed: number;
   walls: boolean;
   gaps: boolean;
 };
 
-export type ZatackaSettingsUpdate = Partial<ZatackaSettings>;
+export type SlitherSettingsUpdate = Partial<SlitherSettings>;
 
-export type ZatackaUsePowerupInput = {
+export type SlitherUsePowerupInput = {
   playerId: string;
 };
 
@@ -113,7 +113,7 @@ export type RamsesAction =
   | { type: 'slide'; x: number; y: number }
   | { type: 'move'; x: number; y: number };
 
-export type ZatackaRiderState = {
+export type SlitherRiderState = {
   id: string;
   name: string;
   color: string;
@@ -122,30 +122,30 @@ export type ZatackaRiderState = {
   position: Point;
 };
 
-export type ZatackaTrail = {
+export type SlitherTrail = {
   playerId: string;
   color: string;
   segments: Point[][];
 };
 
-export type ZatackaPowerupPickup = {
+export type SlitherPowerupPickup = {
   id: string;
-  kind: ZatackaPowerupKind;
+  kind: SlitherPowerupKind;
   position: Point;
 };
 
-export type ZatackaSnapshotRider = ZatackaRiderState & { carriedPowerup?: ZatackaPowerupKind; ghostActive: boolean };
+export type SlitherSnapshotRider = SlitherRiderState & { carriedPowerup?: SlitherPowerupKind; ghostActive: boolean };
 
-export type ZatackaSnapshot = {
-  type: 'zatacka';
+export type SlitherSnapshot = {
+  type: 'slither';
   phase: 'lobby' | 'countdown' | 'running' | 'round-over';
   width: number;
   height: number;
   round: number;
-  riders: ZatackaSnapshotRider[];
-  trails: ZatackaTrail[];
-  powerups: ZatackaPowerupPickup[];
-  settings: ZatackaSettings;
+  riders: SlitherSnapshotRider[];
+  trails: SlitherTrail[];
+  powerups: SlitherPowerupPickup[];
+  settings: SlitherSettings;
   winnerId?: string;
   countdownEndsAt?: number;
   paused: boolean;
@@ -184,7 +184,7 @@ export type ClientRoomSnapshot = {
   players: PlayerSeat[];
   hostSocketId: string;
   viewer: ViewerState;
-  gameState: ZatackaSnapshot | RamsesSnapshot;
+  gameState: SlitherSnapshot | RamsesSnapshot;
 };
 
 export type ServerToClientEvents = {
@@ -196,9 +196,9 @@ export type SocketMessageMap = {
   'room:join': CreateOrJoinPayload;
   'room:addLocalPlayer': AddLocalPlayerPayload;
   'room:startGame': {};
-  'room:updateZatackaSettings': ZatackaSettingsUpdate;
-  'zatacka:input': ZatackaControlInput;
-  'zatacka:usePowerup': ZatackaUsePowerupInput;
+  'room:updateSlitherSettings': SlitherSettingsUpdate;
+  'slither:input': SlitherControlInput;
+  'slither:usePowerup': SlitherUsePowerupInput;
   'ramses:action': RamsesAction;
 };
 

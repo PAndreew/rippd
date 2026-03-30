@@ -1,2 +1,2 @@
-export * from './zatacka';
+export * from './slither';
 export * from './ramses';
