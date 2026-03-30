@@ -6,7 +6,7 @@ export const GAME_CONFIG = {
     kind: 'slither' as const,
     name: 'Slither',
     tagline: 'Last snake standing',
-    description: 'A remake of Slither — leave trails, dodge your rivals, be the last snake standing.'
+    description: 'A remake of Zatacka — leave trails, dodge your rivals, be the last snake standing.'
   },
   ramses: {
     kind: 'ramses' as const,

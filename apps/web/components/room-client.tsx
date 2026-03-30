@@ -207,11 +207,11 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
           <Link href="/"><RippdWordmark textClassName="sm:tracking-[-0.04em]" textColor="text-black" /></Link>
         </nav>
         <header className="zen-nav-shell overflow-hidden">
-          <div className="eyebrow !text-black/40">Room {snapshot?.roomId ?? roomId}</div>
-          <div className="mt-5 display-font text-[clamp(3.7rem,8vw,7rem)] font-black uppercase leading-[0.88] tracking-[-0.01em] sm:tracking-[-0.04em] text-black">
+          <div className="eyebrow !text-white/40">Room {snapshot?.roomId ?? roomId}</div>
+          <div className="mt-5 display-font text-[clamp(3.7rem,8vw,7rem)] font-black uppercase leading-[0.88] tracking-[-0.01em] sm:tracking-[-0.04em] text-white">
             {gameName}
           </div>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-black/64 sm:text-base">
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/64 sm:text-base">
             {GAME_CONFIG[activeGame].description}
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
@@ -220,7 +220,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 {badge}
               </RoomBadge>
             ))}
-            {user ? <RoomBadge tone="border-black/14 bg-black/8 text-black">Signed in</RoomBadge> : <RoomBadge tone="border-black/14 bg-black/8 text-black">Guest mode</RoomBadge>}
+            {user ? <RoomBadge tone="border-white/14 bg-white/8 text-white">Signed in</RoomBadge> : <RoomBadge tone="border-white/14 bg-white/8 text-white">Guest mode</RoomBadge>}
           </div>
         </header>
 
