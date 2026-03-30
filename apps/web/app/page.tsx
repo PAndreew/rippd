@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { GAME_CONFIG, GAME_THEME, GameKind } from '@rippd/shared';
 import { CATEGORY_BADGE_TONES_LIGHT } from '@/lib/design';
+import { RippdWordmark } from '@/components/rippd-logo';
 import {
   AuthUser,
   clearStoredAuthToken,
@@ -451,10 +452,8 @@ function Navbar({ user, onMenuClick }: { user: AuthUser | null; onMenuClick: () 
     <div className="shell-width pt-4 sm:pt-6">
       <nav className="zen-nav-shell">
         <div className="flex items-center justify-between gap-3 sm:gap-6">
-          <span className="display-font text-4xl font-black uppercase tracking-[-0.01em] sm:text-5xl sm:tracking-[-0.04em]">
-            rippd
-          </span>
-          <button onClick={onMenuClick} className="zen-burger" aria-label="Menu">
+          <RippdWordmark />
+          <button onClick={onMenuClick} className="zen-burger" aria-label={user ? `Open account menu for ${user.displayName}` : 'Open account menu'}>
             <span className="flex w-10 flex-col gap-2 sm:w-12">
               <span className="h-[4px] rounded-full bg-white" />
               <span className="h-[4px] rounded-full bg-white" />
@@ -490,7 +489,7 @@ function Footer() {
     <footer className="pb-10 pt-8">
       <div className="shell-width">
         <div className="rounded-[34px] bg-black px-6 py-8 text-white shadow-[0_24px_80px_rgba(0,0,0,0.2)] sm:px-8">
-          <p className="display-font text-4xl font-black uppercase tracking-[-0.01em] sm:tracking-[-0.04em]">rippd</p>
+          <RippdWordmark textClassName="sm:tracking-[-0.04em]" />
           <p className="mt-2 text-sm text-white/48">Copyright 2026</p>
         </div>
       </div>
