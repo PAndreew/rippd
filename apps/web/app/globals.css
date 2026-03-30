@@ -206,8 +206,6 @@ input {
   }
 
   .zen-room-stage {
-    background:
-      radial-gradient(circle at top center, rgba(114, 79, 255, 0.16), transparent 22%),
-      linear-gradient(180deg, #d7d3ee 0%, #d4d0eb 100%);
+    background: #ffffff;
   }
 }

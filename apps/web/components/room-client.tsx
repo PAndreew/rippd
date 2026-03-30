@@ -204,35 +204,29 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
     <main className="zen-room-stage min-h-screen px-4 py-4 sm:px-6 sm:py-6">
       <div className="shell-width flex flex-col gap-6 px-0">
         <nav className="flex items-center">
-          <Link href="/"><RippdWordmark textClassName="sm:tracking-[-0.04em]" /></Link>
+          <Link href="/"><RippdWordmark textClassName="sm:tracking-[-0.04em]" textColor="text-black" /></Link>
         </nav>
         <header className="zen-nav-shell overflow-hidden">
-          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
-            <div>
-              <div className="eyebrow !text-white/40">Room {snapshot?.roomId ?? roomId}</div>
-              <div className="mt-5 display-font text-[clamp(3.7rem,8vw,7rem)] font-black uppercase leading-[0.88] tracking-[-0.01em] sm:tracking-[-0.04em] text-white">
-                {gameName}
-              </div>
-              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/64 sm:text-base">
-                {GAME_CONFIG[activeGame].description}
-              </p>
-              <div className="mt-6 flex flex-wrap gap-2">
-                {theme.badgeClasses.map((badge, index) => (
-                  <RoomBadge key={badge} tone={CATEGORY_BADGE_TONES_LIGHT[index % CATEGORY_BADGE_TONES_LIGHT.length]}>
-                    {badge}
-                  </RoomBadge>
-                ))}
-                {user ? <RoomBadge tone="border-white/14 bg-white/8 text-white">Signed in</RoomBadge> : <RoomBadge tone="border-white/14 bg-white/8 text-white">Guest mode</RoomBadge>}
-              </div>
-            </div>
+          <div className="eyebrow !text-black/40">Room {snapshot?.roomId ?? roomId}</div>
+          <div className="mt-5 display-font text-[clamp(3.7rem,8vw,7rem)] font-black uppercase leading-[0.88] tracking-[-0.01em] sm:tracking-[-0.04em] text-black">
+            {gameName}
+          </div>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-black/64 sm:text-base">
+            {GAME_CONFIG[activeGame].description}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {theme.badgeClasses.map((badge, index) => (
+              <RoomBadge key={badge} tone={CATEGORY_BADGE_TONES_LIGHT[index % CATEGORY_BADGE_TONES_LIGHT.length]}>
+                {badge}
+              </RoomBadge>
+            ))}
+            {user ? <RoomBadge tone="border-black/14 bg-black/8 text-black">Signed in</RoomBadge> : <RoomBadge tone="border-black/14 bg-black/8 text-black">Guest mode</RoomBadge>}
+          </div>
+        </header>
 
-            <div id="room-quick-actions" className="rounded-[30px] bg-[#ece8ff] p-5 text-black">
+        <div id="room-quick-actions" className="rounded-[30px] bg-[#ece8ff] p-5 text-black">
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Quick actions</div>
               <div id="room-action-buttons" className="mt-4 flex flex-wrap gap-3">
-                <button onClick={copyInvite} className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
-                  {copied ? <CheckIcon /> : <ClipboardIcon />}
-                  {copied ? 'Copied!' : 'Copy invite'}
-                </button>
                 <button onClick={addLocalPlayer} className="rounded-full border-2 border-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
                   Add local player
                 </button>
@@ -349,8 +343,6 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 </div>
               </div>
             </div>
-          </div>
-        </header>
 
         {error ? <div className="rounded-[24px] border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-rose-900">{error}</div> : null}
 

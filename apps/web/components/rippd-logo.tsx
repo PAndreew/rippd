@@ -1,10 +1,10 @@
 import type { SVGProps } from 'react';
 
-export function RippdWordmark({ textClassName = 'sm:text-5xl sm:tracking-[-0.04em]' }: { textClassName?: string }) {
+export function RippdWordmark({ textClassName = 'sm:text-5xl sm:tracking-[-0.04em]', textColor = 'text-white' }: { textClassName?: string; textColor?: string }) {
   return (
     <div className="flex items-center gap-3 sm:gap-4">
       <RippdLogo className="h-9 w-auto text-[--brand-logo] sm:h-10" />
-      <span className={`display-font text-4xl font-black uppercase tracking-[-0.01em] text-white ${textClassName}`}>
+      <span className={`display-font text-4xl font-black uppercase tracking-[-0.01em] ${textColor} ${textClassName}`}>
         rippd
       </span>
     </div>
