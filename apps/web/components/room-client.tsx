@@ -7,7 +7,6 @@ import {
   ClientRoomSnapshot,
   ControlPreset,
   GAME_CONFIG,
-  GAME_THEME,
   GameKind,
   RamsesAction,
   SlitherControlInput,
@@ -16,7 +15,6 @@ import {
 import { SlitherView } from '@/components/slither-view';
 import { RamsesView } from '@/components/ramses-view';
 import { RippdWordmark } from '@/components/rippd-logo';
-import { CATEGORY_BADGE_TONES_LIGHT } from '@/lib/design';
 import { fetchCurrentUser, getStoredAuthToken, type AuthUser } from '@/lib/auth';
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'ws://localhost:3001';
@@ -177,7 +175,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
   };
 
   const slitherGame = snapshot?.game === 'slither' && snapshot.gameState.type === 'slither' ? snapshot.gameState : null;
-  const gameIsActive = slitherGame ? slitherGame.phase !== 'lobby' : false;
+  const ramsesGame = snapshot?.game === 'ramses' && snapshot.gameState.type === 'ramses' ? snapshot.gameState : null;
+  const gameIsActive = slitherGame ? slitherGame.phase !== 'lobby' : ramsesGame ? ramsesGame.phase !== 'lobby' : false;
 
   if (joining && !snapshot) {
     return (
@@ -212,14 +211,11 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
         {error ? <div className="rounded-[24px] border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-rose-900">{error}</div> : null}
 
         <section className="grid gap-6 xl:grid-cols-[1fr_260px]">
-          {/* Settings + players card */}
-          <div className="rounded-[30px] bg-[#ece8ff] p-5 text-black flex flex-col gap-5">
-
-            {/* Slither settings */}
+          <div className="flex flex-col gap-5 rounded-[30px] bg-[#ece8ff] p-5 text-black">
             {slitherGame && (
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Settings</div>
-                <div className="mt-3 rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm text-black/70 space-y-3">
+                <div className="mt-3 space-y-3 rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm text-black/70">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Speed</div>
@@ -228,7 +224,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => { const v = slitherGame.settings.speed - 1; if (v >= 1) send('room:updateSlitherSettings', { speed: v }); }}
-                        className="w-8 h-8 rounded-full border border-black/15 bg-white text-black font-bold text-base leading-none hover:bg-black/8 flex items-center justify-center"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-black/15 bg-white text-base font-bold leading-none text-black hover:bg-black/8"
                       >−</button>
                       <input
                         type="number"
@@ -244,7 +240,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                       />
                       <button
                         onClick={() => { const v = slitherGame.settings.speed + 1; if (v <= 10) send('room:updateSlitherSettings', { speed: v }); }}
-                        className="w-8 h-8 rounded-full border border-black/15 bg-white text-black font-bold text-base leading-none hover:bg-black/8 flex items-center justify-center"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-black/15 bg-white text-base font-bold leading-none text-black hover:bg-black/8"
                       >+</button>
                     </div>
                   </div>
@@ -282,7 +278,6 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
               </div>
             )}
 
-            {/* Players */}
             <div>
               <div className="flex items-center justify-between gap-3">
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Players</div>
@@ -297,7 +292,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                   return (
                     <div key={player.id} className="rounded-[20px] border border-black/10 bg-white/60 px-4 py-3 text-sm">
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 font-semibold text-black min-w-0">
+                        <div className="flex min-w-0 items-center gap-2 font-semibold text-black">
                           <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: player.color }} />
                           {isLocal ? (
                             <input
@@ -310,13 +305,13 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                                 else e.target.value = player.name;
                               }}
                               onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                              className="min-w-0 flex-1 bg-transparent outline-none border-b border-black/20 focus:border-black/60 text-black font-semibold"
+                              className="min-w-0 flex-1 border-b border-black/20 bg-transparent font-semibold text-black outline-none focus:border-black/60"
                             />
                           ) : (
                             <span>{player.name}</span>
                           )}
                         </div>
-                        <span className="text-xs uppercase tracking-[0.18em] text-black/40 shrink-0">{player.controlPreset}</span>
+                        <span className="shrink-0 text-xs uppercase tracking-[0.18em] text-black/40">{player.controlPreset}</span>
                       </div>
                       <div className="mt-1 text-black/50">{isLocal ? 'This device · tap name to rename' : 'Remote player'}</div>
                       {riderState && (
@@ -331,7 +326,6 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
               </div>
             </div>
 
-            {/* Invite link */}
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Invite link</div>
               <div className="mt-2 flex items-start gap-2">
@@ -346,7 +340,6 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
               </div>
             </div>
 
-            {/* Start / restart — bottom of card */}
             <div className="mt-auto pt-2">
               <button onClick={startGame} className="rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
                 Start / restart
@@ -354,16 +347,24 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
             </div>
           </div>
 
-          {/* Controls sidebar */}
           <aside id="room-sidebar" className="rounded-[34px] border border-black/10 bg-black p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
             <div id="room-controls" className="text-sm text-white/72">
               <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Controls</div>
-              <ul className="space-y-1">
-                <li>Arrows: left / right · use powerup with up</li>
-                <li>WASD: A / D · use powerup with W</li>
-                <li>TFGH: F / H · use powerup with T</li>
-                <li>IJKL: J / L · use powerup with I</li>
-              </ul>
+              {snapshot?.game === 'slither' ? (
+                <ul className="space-y-1">
+                  <li>Arrows: left / right · use powerup with up</li>
+                  <li>WASD: A / D · use powerup with W</li>
+                  <li>TFGH: F / H · use powerup with T</li>
+                  <li>IJKL: J / L · use powerup with I</li>
+                </ul>
+              ) : (
+                <ul className="space-y-2">
+                  <li>Click one of the highlighted pyramids next to the hole.</li>
+                  <li>Empty coins are safe, so your turn keeps going.</li>
+                  <li>The wrong treasure ends your turn right away.</li>
+                  <li>The same card stays active until somebody finds it.</li>
+                </ul>
+              )}
             </div>
             {slitherGame && slitherGame.settings.powerups && (
               <div className="mt-4 text-sm text-white/72">
@@ -375,30 +376,35 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 </ul>
               </div>
             )}
+            {ramsesGame && (
+              <div className="mt-4 text-sm text-white/72">
+                <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Round</div>
+                <div>Deck left: <span className="font-semibold text-white">{ramsesGame.deckRemaining}</span></div>
+                <div className="mt-1">Current card: <span className="font-semibold capitalize text-white">{ramsesGame.currentCard?.treasure ?? '—'}</span>{ramsesGame.currentCard ? ` · ${ramsesGame.currentCard.points} pts` : ''}</div>
+              </div>
+            )}
           </aside>
         </section>
       </div>
 
-      {/* Full-window game overlay */}
       {snapshot && gameIsActive && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#060606]">
-          {/* HUD bar */}
-          <div className="flex items-center gap-4 border-b border-white/10 px-5 py-3">
-            <div className="text-xs font-bold uppercase tracking-[0.14em] text-white/50">
-              Round {slitherGame?.round ?? 1}
+        <div className={`fixed inset-0 z-50 flex flex-col ${snapshot.game === 'slither' ? 'bg-[#060606]' : 'bg-[#f2ead3]'}`}>
+          <div className={`flex items-center gap-4 px-5 py-3 ${snapshot.game === 'slither' ? 'border-b border-white/10' : 'border-b border-black/10 bg-white/70'}`}>
+            <div className={`text-xs font-bold uppercase tracking-[0.14em] ${snapshot.game === 'slither' ? 'text-white/50' : 'text-black/45'}`}>
+              {snapshot.game === 'slither' ? `Round ${slitherGame?.round ?? 1}` : `Deck left ${ramsesGame?.deckRemaining ?? 0}`}
             </div>
             <div className="flex flex-1 flex-wrap gap-3">
               {snapshot.players.map((player) => {
                 const rider = slitherGame?.riders.find((r) => r.id === player.id);
-                const score = slitherGame?.scores?.[player.id] ?? 0;
+                const score = slitherGame?.scores?.[player.id] ?? ramsesGame?.players.find((entry) => entry.id === player.id)?.score ?? 0;
                 return (
                   <div key={player.id} className={`flex items-center gap-2 rounded-full px-3 py-1 ${rider?.alive === false ? 'opacity-40' : ''}`} style={{ background: player.color + '22', border: `1px solid ${player.color}55` }}>
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: player.color }} />
-                    <span className="text-sm font-semibold text-white">{player.name}</span>
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: player.color }} />
+                    <span className={`text-sm font-semibold ${snapshot.game === 'slither' ? 'text-white' : 'text-black'}`}>{player.name}</span>
                     {rider?.carriedPowerup && (
-                      <span className="text-xs text-white/60">{rider.ghostActive ? '👻' : rider.carriedPowerup === 'bomb' ? '💣' : '⚡'}</span>
+                      <span className={`text-xs ${snapshot.game === 'slither' ? 'text-white/60' : 'text-black/55'}`}>{rider.ghostActive ? '👻' : rider.carriedPowerup === 'bomb' ? '💣' : '⚡'}</span>
                     )}
-                    <span className="text-xs font-bold text-white/50">{score}</span>
+                    <span className={`text-xs font-bold ${snapshot.game === 'slither' ? 'text-white/50' : 'text-black/45'}`}>{score}</span>
                   </div>
                 );
               })}
@@ -411,16 +417,17 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 {slitherGame.paused ? 'Resume' : 'Pause'}
               </button>
             )}
-            <button
-              onClick={() => send('room:stopGame', {})}
-              className="shrink-0 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-rose-500/60 hover:border-rose-400/40"
-              title="Exit game"
-            >
-              Exit
-            </button>
+            {snapshot.game === 'slither' && (
+              <button
+                onClick={() => send('room:stopGame', {})}
+                className="shrink-0 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-rose-500/60 hover:border-rose-400/40"
+                title="Exit game"
+              >
+                Exit
+              </button>
+            )}
           </div>
 
-          {/* Game canvas */}
           <div className="relative flex-1 min-h-0">
             {snapshot.game === 'slither' ? (
               <SlitherView

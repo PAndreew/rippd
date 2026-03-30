@@ -49,6 +49,21 @@ input {
   @apply transition;
 }
 
+button:not(:disabled) {
+  transition-property: transform, box-shadow, background-color, border-color, color, opacity;
+  transition-duration: 180ms;
+  transition-timing-function: ease;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+}
+
 @layer components {
   .page-shell {
     min-height: 100vh;

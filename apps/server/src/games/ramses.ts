@@ -1,247 +1,222 @@
 import {
-  hashPoint,
   PlayerSeat,
   RamsesAction,
+  RamsesCard,
   RamsesCell,
-  RamsesPawn,
+  RamsesPlayer,
   RamsesSnapshot,
-  randomFrom,
-  TreasureColor,
-  TREASURE_COLORS
+  TreasureKind,
+  TREASURE_KINDS
 } from '@rippd/shared';
 import { recordMatchSummary, recordRoomEvent } from '../db';
 
 export type InternalRamsesCell = RamsesCell & {
-  treasure?: TreasureColor;
-  discovered: boolean;
+  hiddenCoin: TreasureKind | 'empty';
 };
 
 export type InternalRamsesGame = {
   type: 'ramses';
   rows: number;
   cols: number;
-  phase: 'lobby' | 'slide' | 'move' | 'round-over';
+  phase: 'lobby' | 'playing' | 'round-over';
   cells: InternalRamsesCell[];
-  pawns: RamsesPawn[];
+  players: RamsesPlayer[];
   turnIndex: number;
-  targetCards: Record<string, TreasureColor | undefined>;
-  empty: { x: number; y: number };
-  reachable: { x: number; y: number }[];
+  hole: { x: number; y: number };
+  currentCard?: RamsesCard;
+  deck: RamsesCard[];
+  deckIndex: number;
+  movable: { x: number; y: number }[];
   message: string;
+  winnerIds: string[];
   startedAt?: number;
 };
 
-export function createRamsesGame(players: PlayerSeat[]): InternalRamsesGame {
-  const rows = 7;
-  const cols = 7;
+function shuffle<T>(items: T[]) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
+function createDeck() {
+  return shuffle(
+    TREASURE_KINDS.flatMap((treasure) => [
+      { treasure, points: 1 as const },
+      { treasure, points: 2 as const },
+      { treasure, points: 3 as const }
+    ])
+  );
+}
+
+function buildCoins(rows: number, cols: number, hole: { x: number; y: number }) {
   const cells: InternalRamsesCell[] = [];
-  const empty = { x: 3, y: 3 };
+  const positions: { x: number; y: number }[] = [];
 
   for (let y = 0; y < rows; y += 1) {
     for (let x = 0; x < cols; x += 1) {
-      const isEmpty = x === empty.x && y === empty.y;
-      const blocked = !isEmpty && Math.random() < 0.45;
-      cells.push({ x, y, blocked, discovered: !blocked });
+      positions.push({ x, y });
     }
   }
 
-  const openCells = cells.filter((cell) => !cell.blocked);
-  const treasureSpots = [...openCells].sort(() => Math.random() - 0.5).slice(0, Math.min(10, openCells.length));
-  treasureSpots.forEach((cell, index) => {
-    cell.treasure = TREASURE_COLORS[index % TREASURE_COLORS.length];
-  });
+  const treasurePositions = shuffle(positions.filter((position) => position.x !== hole.x || position.y !== hole.y)).slice(0, TREASURE_KINDS.length);
+  const treasureMap = new Map(treasurePositions.map((position, index) => [`${position.x},${position.y}`, TREASURE_KINDS[index]]));
 
-  const pawns: RamsesPawn[] = players.map((player, index) => ({
-    id: player.id,
-    name: player.name,
-    position: index % 2 === 0 ? { x: 0, y: index } : { x: cols - 1, y: rows - 1 - index },
-    score: 0
-  }));
-
-  const targetCards: Record<string, TreasureColor | undefined> = {};
-  pawns.forEach((pawn) => {
-    targetCards[pawn.id] = randomFrom(TREASURE_COLORS);
-  });
-
-  const game: InternalRamsesGame = {
-    type: 'ramses',
-    rows,
-    cols,
-    phase: pawns.length ? 'slide' : 'lobby',
-    cells,
-    pawns,
-    turnIndex: 0,
-    targetCards,
-    empty,
-    reachable: [],
-    message: 'Slide a neighbouring pyramid into the empty slot, then move along the open path.',
-    startedAt: Date.now()
-  };
-
-  if (pawns[0]) {
-    game.reachable = computeReachable(game, pawns[0].position);
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < cols; x += 1) {
+      const key = `${x},${y}`;
+      const hiddenCoin = treasureMap.get(key) ?? 'empty';
+      const isHole = x === hole.x && y === hole.y;
+      cells.push({
+        x,
+        y,
+        covered: !isHole,
+        hiddenCoin,
+        coin: isHole ? hiddenCoin : 'empty',
+        isHole
+      });
+    }
   }
 
-  return game;
+  return cells;
 }
 
 function getCell(game: InternalRamsesGame, x: number, y: number) {
   return game.cells.find((cell) => cell.x === x && cell.y === y);
 }
 
-function currentPawn(game: InternalRamsesGame) {
-  return game.pawns[game.turnIndex];
+function currentPlayer(game: InternalRamsesGame) {
+  return game.players[game.turnIndex];
 }
 
-function computeReachable(game: InternalRamsesGame, start: { x: number; y: number }) {
-  const queue = [start];
-  const seen = new Set<string>([hashPoint(start)]);
-  const result = [start];
-
-  while (queue.length) {
-    const current = queue.shift()!;
-    const neighbours = [
-      { x: current.x + 1, y: current.y },
-      { x: current.x - 1, y: current.y },
-      { x: current.x, y: current.y + 1 },
-      { x: current.x, y: current.y - 1 }
-    ];
-
-    neighbours.forEach((next) => {
-      if (next.x < 0 || next.y < 0 || next.x >= game.cols || next.y >= game.rows) return;
-      const key = hashPoint(next);
-      if (seen.has(key)) return;
-      const cell = getCell(game, next.x, next.y);
-      if (!cell || cell.blocked) return;
-      seen.add(key);
-      queue.push(next);
-      result.push(next);
-    });
-  }
-
-  return result;
+function computeMovable(game: InternalRamsesGame) {
+  return [
+    { x: game.hole.x + 1, y: game.hole.y },
+    { x: game.hole.x - 1, y: game.hole.y },
+    { x: game.hole.x, y: game.hole.y + 1 },
+    { x: game.hole.x, y: game.hole.y - 1 }
+  ].filter((point) => point.x >= 0 && point.y >= 0 && point.x < game.cols && point.y < game.rows);
 }
 
-function findPath(game: InternalRamsesGame, start: { x: number; y: number }, end: { x: number; y: number }) {
-  const queue = [start];
-  const parents = new Map<string, string>();
-  const seen = new Set<string>([hashPoint(start)]);
-
-  while (queue.length) {
-    const current = queue.shift()!;
-    if (current.x === end.x && current.y === end.y) break;
-    const neighbours = [
-      { x: current.x + 1, y: current.y },
-      { x: current.x - 1, y: current.y },
-      { x: current.x, y: current.y + 1 },
-      { x: current.x, y: current.y - 1 }
-    ];
-
-    neighbours.forEach((next) => {
-      if (next.x < 0 || next.y < 0 || next.x >= game.cols || next.y >= game.rows) return;
-      const key = hashPoint(next);
-      if (seen.has(key)) return;
-      const cell = getCell(game, next.x, next.y);
-      if (!cell || cell.blocked) return;
-      seen.add(key);
-      parents.set(key, hashPoint(current));
-      queue.push(next);
-    });
-  }
-
-  if (!seen.has(hashPoint(end))) return [];
-  const path: { x: number; y: number }[] = [];
-  let cursor = hashPoint(end);
-  while (cursor) {
-    const [x, y] = cursor.split(',').map(Number);
-    path.unshift({ x, y });
-    cursor = parents.get(cursor) ?? '';
-  }
-  return path;
+function moveToNextPlayer(game: InternalRamsesGame) {
+  if (!game.players.length) return;
+  game.turnIndex = (game.turnIndex + 1) % game.players.length;
 }
 
-function nextTarget(current?: TreasureColor): TreasureColor | undefined {
-  const pool = TREASURE_COLORS.filter((color) => color !== current);
-  return pool.length ? randomFrom(pool) : current;
+function topCard(game: InternalRamsesGame) {
+  return game.deck[game.deckIndex];
+}
+
+function updateRoundState(game: InternalRamsesGame) {
+  game.currentCard = topCard(game);
+  game.movable = game.phase === 'playing' ? computeMovable(game) : [];
+
+  if (!game.currentCard) {
+    const highScore = Math.max(...game.players.map((player) => player.score), 0);
+    game.winnerIds = game.players.filter((player) => player.score === highScore).map((player) => player.id);
+    game.phase = 'round-over';
+    game.movable = [];
+    if (game.winnerIds.length > 1) {
+      game.message = `Deck finished. It's a tie on ${highScore} points.`;
+    } else {
+      const winner = game.players.find((player) => player.id === game.winnerIds[0]);
+      game.message = winner ? `${winner.name} wins with ${winner.score} points.` : 'Deck finished.';
+    }
+  }
+}
+
+export function createRamsesGame(players: PlayerSeat[]): InternalRamsesGame {
+  const rows = 7;
+  const cols = 7;
+  const hole = { x: Math.floor(cols / 2), y: Math.floor(rows / 2) };
+  const deck = createDeck();
+
+  const game: InternalRamsesGame = {
+    type: 'ramses',
+    rows,
+    cols,
+    phase: players.length ? 'playing' : 'lobby',
+    cells: buildCoins(rows, cols, hole),
+    players: players.map((player) => ({
+      id: player.id,
+      name: player.name,
+      score: 0
+    })),
+    turnIndex: 0,
+    hole,
+    currentCard: deck[0],
+    deck,
+    deckIndex: 0,
+    movable: [],
+    message: 'Slide a pyramid into the hole. Empty coins are safe, the wrong treasure ends your turn, and the matching treasure wins the card.',
+    winnerIds: [],
+    startedAt: Date.now()
+  };
+
+  updateRoundState(game);
+  return game;
 }
 
 export function currentRamsesPlayerId(game: InternalRamsesGame) {
-  return currentPawn(game)?.id ?? '';
+  return currentPlayer(game)?.id ?? '';
 }
 
 export async function handleRamsesAction(roomCode: string, game: InternalRamsesGame, playerId: string, action: RamsesAction, playerCount: number) {
-  if (game.phase === 'lobby' || game.phase === 'round-over') return false;
-  const pawn = currentPawn(game);
-  if (!pawn || pawn.id !== playerId) return false;
+  if (game.phase !== 'playing' || action.type !== 'slide') return false;
 
-  if (action.type === 'slide' && game.phase === 'slide') {
-    const cell = getCell(game, action.x, action.y);
-    const emptyCell = getCell(game, game.empty.x, game.empty.y);
-    if (!cell || !emptyCell || !cell.blocked) return false;
-    const adjacent = Math.abs(cell.x - game.empty.x) + Math.abs(cell.y - game.empty.y) === 1;
-    if (!adjacent) return false;
+  const player = currentPlayer(game);
+  const card = game.currentCard;
+  if (!player || player.id !== playerId || !card) return false;
 
-    emptyCell.blocked = true;
-    cell.blocked = false;
-    cell.discovered = true;
-    cell.revealedTreasure = cell.treasure;
-    game.empty = { x: cell.x, y: cell.y };
-    game.phase = 'move';
-    game.reachable = computeReachable(game, pawn.position);
-    game.message = 'Now move your pawn through the open path.';
-    return true;
-  }
+  const clicked = getCell(game, action.x, action.y);
+  const holeCell = getCell(game, game.hole.x, game.hole.y);
+  if (!clicked || !holeCell || !clicked.covered) return false;
 
-  if (action.type === 'move' && game.phase === 'move') {
-    const reachable = game.reachable.some((spot) => spot.x === action.x && spot.y === action.y);
-    if (!reachable) return false;
-    const destination = getCell(game, action.x, action.y);
-    if (!destination || destination.blocked) return false;
+  const adjacent = Math.abs(clicked.x - game.hole.x) + Math.abs(clicked.y - game.hole.y) === 1;
+  if (!adjacent) return false;
 
-    const path = findPath(game, pawn.position, { x: action.x, y: action.y });
-    const target = game.targetCards[pawn.id];
-    const touchedOtherTreasure = path.some((step, index) => {
-      const stepCell = getCell(game, step.x, step.y);
-      if (!stepCell?.revealedTreasure) return false;
-      if (index === path.length - 1 && stepCell.revealedTreasure === target) return false;
-      return true;
-    });
+  holeCell.covered = true;
+  holeCell.isHole = false;
+  holeCell.coin = 'empty';
+  clicked.covered = false;
+  clicked.isHole = true;
+  clicked.coin = clicked.hiddenCoin;
+  game.hole = { x: clicked.x, y: clicked.y };
 
-    pawn.position = { x: action.x, y: action.y };
-
-    if (!touchedOtherTreasure && destination.revealedTreasure && destination.revealedTreasure === target) {
-      pawn.score += 1;
-      game.targetCards[pawn.id] = nextTarget(target);
-      game.message = `${pawn.name} claimed the ${target} treasure.`;
-    } else if (touchedOtherTreasure) {
-      game.message = `${pawn.name} touched another treasure on the way, so the card was not claimed.`;
-    } else {
-      game.message = `${pawn.name} moved safely but did not reach the target treasure.`;
-    }
-
-    if (pawn.score >= 3) {
-      game.phase = 'round-over';
-      game.reachable = [];
-      game.message = `${pawn.name} wins the treasure race.`;
+  if (clicked.hiddenCoin === card.treasure) {
+    player.score += card.points;
+    game.deckIndex += 1;
+    moveToNextPlayer(game);
+    updateRoundState(game);
+    if (!game.currentCard) {
       await recordMatchSummary({
         roomId: roomCode,
         gameKind: 'ramses',
-        winnerPlayerId: pawn.id,
+        winnerPlayerId: game.winnerIds[0],
         playerCount,
         startedAt: game.startedAt ? new Date(game.startedAt) : undefined,
         endedAt: new Date(),
-        summary: { scores: game.pawns.map((entry) => ({ id: entry.id, score: entry.score })) }
+        summary: {
+          scores: game.players.map((entry) => ({ id: entry.id, score: entry.score })),
+          winners: game.winnerIds
+        }
       });
-      return true;
+    } else {
+      const nextCard = game.currentCard;
+      game.message = `${player.name} found the ${card.treasure} and took ${card.points} point${card.points === 1 ? '' : 's'}. Next card: ${nextCard?.treasure ?? 'none'} for ${nextCard?.points ?? 0}.`;
     }
-
-    game.turnIndex = (game.turnIndex + 1) % game.pawns.length;
-    game.phase = 'slide';
-    game.reachable = computeReachable(game, currentPawn(game).position);
     return true;
   }
 
-  return false;
+  if (clicked.hiddenCoin !== 'empty') {
+    const wrongTreasure = clicked.hiddenCoin;
+    moveToNextPlayer(game);
+    updateRoundState(game);
+    const nextPlayer = currentPlayer(game);
+    game.message = `${player.name} hit the ${wrongTreasure} instead of the ${card.treasure}. Turn over — ${nextPlayer?.name ?? 'next player'} keeps chasing the same card for ${card.points}.`;
+    return true;
+  }
+
+  game.movable = computeMovable(game);
+  game.message = `${player.name} moved onto an empty coin. Keep sliding toward the ${card.treasure} worth ${card.points}.`;
+  return true;
 }
 
 export function startRamses(roomCode: string, players: PlayerSeat[]) {
@@ -260,12 +235,15 @@ export function buildRamsesSnapshot(game: InternalRamsesGame): RamsesSnapshot {
     cells: game.cells.map((cell) => ({
       x: cell.x,
       y: cell.y,
-      blocked: cell.blocked,
-      revealedTreasure: cell.discovered && !cell.blocked ? cell.revealedTreasure : undefined
+      covered: cell.covered,
+      coin: cell.covered ? 'empty' : cell.coin,
+      isHole: cell.isHole
     })),
-    pawns: game.pawns,
-    targetCards: game.targetCards,
-    reachable: game.phase === 'move' ? game.reachable : [],
-    message: game.message
+    players: game.players,
+    currentCard: game.currentCard,
+    deckRemaining: Math.max(game.deck.length - game.deckIndex, 0),
+    movable: game.movable,
+    message: game.message,
+    winnerIds: game.winnerIds
   };
 }

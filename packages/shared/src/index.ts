@@ -11,8 +11,8 @@ export const GAME_CONFIG = {
   ramses: {
     kind: 'ramses' as const,
     name: 'Treasure Hunt',
-    tagline: 'Treasure maze with moving pyramids',
-    description: 'Slide square pyramids, reveal coloured treasures, and path your pawn to the matching card.'
+    tagline: 'Card-driven treasure race',
+    description: 'Pull treasure cards, slide pyramids around a single hole, and reach the matching treasure without stumbling onto the wrong one.'
   }
 };
 
@@ -61,8 +61,8 @@ export const CONTROL_KEYSETS: Record<ControlPreset, { left: string; right: strin
   ijkl: { left: 'j', right: 'l', action: 'i' }
 };
 
-export type TreasureColor = 'tomato' | 'gold' | 'deepskyblue' | 'mediumspringgreen' | 'orchid' | 'coral';
-export const TREASURE_COLORS: TreasureColor[] = ['tomato', 'gold', 'deepskyblue', 'mediumspringgreen', 'orchid', 'coral'];
+export type TreasureKind = 'star' | 'diamond' | 'scarab' | 'ankh' | 'sun' | 'eye';
+export const TREASURE_KINDS: TreasureKind[] = ['star', 'diamond', 'scarab', 'ankh', 'sun', 'eye'];
 
 export type Point = { x: number; y: number };
 
@@ -110,9 +110,7 @@ export type SlitherUsePowerupInput = {
   playerId: string;
 };
 
-export type RamsesAction =
-  | { type: 'slide'; x: number; y: number }
-  | { type: 'move'; x: number; y: number };
+export type RamsesAction = { type: 'slide'; x: number; y: number };
 
 export type SlitherRiderState = {
   id: string;
@@ -153,17 +151,22 @@ export type SlitherSnapshot = {
   paused: boolean;
 };
 
+export type RamsesCard = {
+  treasure: TreasureKind;
+  points: 1 | 2 | 3;
+};
+
 export type RamsesCell = {
   x: number;
   y: number;
-  blocked: boolean;
-  revealedTreasure?: TreasureColor;
+  covered: boolean;
+  coin: TreasureKind | 'empty';
+  isHole: boolean;
 };
 
-export type RamsesPawn = {
+export type RamsesPlayer = {
   id: string;
   name: string;
-  position: Point;
   score: number;
 };
 
@@ -171,13 +174,15 @@ export type RamsesSnapshot = {
   type: 'ramses';
   rows: number;
   cols: number;
-  phase: 'lobby' | 'slide' | 'move' | 'round-over';
+  phase: 'lobby' | 'playing' | 'round-over';
   turnPlayerId: string;
   cells: RamsesCell[];
-  pawns: RamsesPawn[];
-  targetCards: Record<string, TreasureColor | undefined>;
-  reachable: Point[];
+  players: RamsesPlayer[];
+  currentCard?: RamsesCard;
+  deckRemaining: number;
+  movable: Point[];
   message: string;
+  winnerIds: string[];
 };
 
 export type ClientRoomSnapshot = {
