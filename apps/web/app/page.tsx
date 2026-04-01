@@ -412,9 +412,9 @@ function GameSection({
         <div
           className={`grid items-center gap-8 lg:grid-cols-2 ${index % 2 === 1 ? '' : ''}`}
         >
-          <div className={index % 2 === 1 ? 'lg:order-2' : ''}>
+          <div className={`min-w-0 overflow-hidden ${index % 2 === 1 ? 'lg:order-2' : ''}`}>
             <div className="eyebrow">{theme.badgeLabel}</div>
-            <div className="mt-8 zen-display-title text-[clamp(4.2rem,10vw,9rem)]">
+            <div className="mt-8 zen-display-title text-[clamp(3.5rem,7.5vw,7rem)]">
               {game.name.split(' ').map((part) => (
                 <span key={part}>{part}</span>
               ))}
@@ -481,14 +481,14 @@ function Hero() {
               Digital remakes of classic board games and digital games, playable instantly with friends.
             </p>
           </div>
-          <div className="hidden lg:flex items-center justify-end pr-4">
+          <div className="hidden lg:block overflow-hidden self-stretch flex-shrink-0" style={{ width: 190 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/mascot.svg"
               alt="Rippd mascot"
-              width={180}
-              height={145}
-              style={{ transform: 'scaleX(-1)' }}
+              width={270}
+              height={217}
+              style={{ transform: 'translateX(28px) rotate(-90deg) scaleX(-1)' }}
               className="select-none"
             />
           </div>

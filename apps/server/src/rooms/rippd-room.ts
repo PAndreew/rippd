@@ -173,9 +173,10 @@ export class RippdRoom extends Room {
 
     if (!this.sessionLocalPlayers.has(client.sessionId)) {
       this.sessionLocalPlayers.set(client.sessionId, []);
+      const presetList = ['arrows', 'wasd', 'tfgh', 'ijkl'] as const;
       await this.addLocalPlayer(client, {
         name: options.nickname || 'Player',
-        controlPreset: 'arrows'
+        controlPreset: presetList[this.players.length % presetList.length]
       });
       await recordRoomEvent({ roomId: this.roomCode, gameKind: this.game, eventType: 'player_joined', payload: { sessionId: client.sessionId } });
     }
