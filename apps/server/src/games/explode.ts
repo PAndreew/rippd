@@ -129,7 +129,7 @@ function settleRound(game: InternalExplodeGame) {
       : `${game.players.find((player) => player.id === game.winnerIds[0])?.name ?? 'Winner'} wins with ${highScore} point${highScore === 1 ? '' : 's'}.`;
 }
 
-export function createExplodeGame(players: PlayerSeat[]) {
+export function createExplodeGame(players: PlayerSeat[]): InternalExplodeGame {
   return {
     type: 'explode',
     rows: DEFAULT_ROWS,
@@ -143,7 +143,7 @@ export function createExplodeGame(players: PlayerSeat[]) {
     message: 'Press start, then reveal safe cells. Empty zones cascade, mines cost points and pass the turn.',
     winnerIds: [],
     minesPlaced: false
-  } satisfies InternalExplodeGame;
+  };
 }
 
 export function startExplode(roomCode: string, players: PlayerSeat[]) {
