@@ -6,6 +6,7 @@ import { Client, Room } from 'colyseus.js';
 import {
   ClientRoomSnapshot,
   ControlPreset,
+  ExplodeAction,
   GAME_CONFIG,
   GameKind,
   RamsesAction,
@@ -14,6 +15,7 @@ import {
 } from '@rippd/shared';
 import { SlitherView } from '@/components/slither-view';
 import { RamsesView } from '@/components/ramses-view';
+import { ExplodeView } from '@/components/explode-view';
 import { RippdWordmark } from '@/components/rippd-logo';
 import { fetchCurrentUser, getStoredAuthToken, type AuthUser } from '@/lib/auth';
 
@@ -139,7 +141,6 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
     };
 
     void connect();
-
     return () => {
       active = false;
     };
@@ -151,13 +152,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
     return `${window.location.origin}/room/${roomId}?game=${game}`;
   }, [initialGame, roomId, snapshot?.game]);
 
-  const send = (type: string, payload: unknown) => {
-    roomRef.current?.send(type, payload);
-  };
-
-  const startGame = () => {
-    send('room:startGame', {});
-  };
+  const send = (type: string, payload: unknown) => roomRef.current?.send(type, payload);
+  const startGame = () => send('room:startGame', {});
 
   const addLocalPlayer = () => {
     const preset = presets[(snapshot?.viewer.localPlayerIds.length ?? 0) % presets.length];
@@ -176,7 +172,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
 
   const slitherGame = snapshot?.game === 'slither' && snapshot.gameState.type === 'slither' ? snapshot.gameState : null;
   const ramsesGame = snapshot?.game === 'ramses' && snapshot.gameState.type === 'ramses' ? snapshot.gameState : null;
-  const gameIsActive = slitherGame ? slitherGame.phase !== 'lobby' : ramsesGame ? ramsesGame.phase !== 'lobby' : false;
+  const explodeGame = snapshot?.game === 'explode' && snapshot.gameState.type === 'explode' ? snapshot.gameState : null;
+  const gameIsActive = slitherGame ? slitherGame.phase !== 'lobby' : ramsesGame ? ramsesGame.phase === 'playing' : explodeGame ? explodeGame.phase === 'playing' : false;
 
   if (joining && !snapshot) {
     return (
@@ -222,10 +219,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                       <div className="text-xs text-black/50">1 = slow · 10 = fast</div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => { const v = slitherGame.settings.speed - 1; if (v >= 1) send('room:updateSlitherSettings', { speed: v }); }}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-black/15 bg-white text-base font-bold leading-none text-black hover:bg-black/8"
-                      >−</button>
+                      <button onClick={() => { const v = slitherGame.settings.speed - 1; if (v >= 1) send('room:updateSlitherSettings', { speed: v }); }} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/15 bg-white text-base font-bold leading-none text-black hover:bg-black/8">−</button>
                       <input
                         type="number"
                         min={1}
@@ -238,10 +232,7 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                         }}
                         className="w-12 rounded-[14px] border border-black/15 bg-white px-2 py-1.5 text-center text-sm font-bold text-black outline-none focus:border-black/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
-                      <button
-                        onClick={() => { const v = slitherGame.settings.speed + 1; if (v <= 10) send('room:updateSlitherSettings', { speed: v }); }}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-black/15 bg-white text-base font-bold leading-none text-black hover:bg-black/8"
-                      >+</button>
+                      <button onClick={() => { const v = slitherGame.settings.speed + 1; if (v <= 10) send('room:updateSlitherSettings', { speed: v }); }} className="flex h-8 w-8 items-center justify-center rounded-full border border-black/15 bg-white text-base font-bold leading-none text-black hover:bg-black/8">+</button>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-3">
@@ -249,30 +240,40 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                       <div className="font-semibold text-black">Walls</div>
                       <div className="text-xs">{slitherGame.settings.walls ? 'Crash at edge' : 'Wrap around'}</div>
                     </div>
-                    <ToggleSwitch
-                      checked={slitherGame.settings.walls}
-                      onChange={() => send('room:updateSlitherSettings', { walls: !slitherGame.settings.walls })}
-                    />
+                    <ToggleSwitch checked={slitherGame.settings.walls} onChange={() => send('room:updateSlitherSettings', { walls: !slitherGame.settings.walls })} />
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Gaps</div>
                       <div className="text-xs">{slitherGame.settings.gaps ? 'Gaps in trails' : 'Solid trails'}</div>
                     </div>
-                    <ToggleSwitch
-                      checked={slitherGame.settings.gaps}
-                      onChange={() => send('room:updateSlitherSettings', { gaps: !slitherGame.settings.gaps })}
-                    />
+                    <ToggleSwitch checked={slitherGame.settings.gaps} onChange={() => send('room:updateSlitherSettings', { gaps: !slitherGame.settings.gaps })} />
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="font-semibold text-black">Powerups</div>
                       <div className="text-xs">{slitherGame.settings.powerups ? 'Enabled' : 'Disabled'}</div>
                     </div>
-                    <ToggleSwitch
-                      checked={slitherGame.settings.powerups}
-                      onChange={() => send('room:updateSlitherSettings', { powerups: !slitherGame.settings.powerups })}
-                    />
+                    <ToggleSwitch checked={slitherGame.settings.powerups} onChange={() => send('room:updateSlitherSettings', { powerups: !slitherGame.settings.powerups })} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {explodeGame && (
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Round</div>
+                <div className="mt-3 grid gap-3 rounded-[24px] border border-black/10 bg-white/60 p-4 text-sm text-black/70 sm:grid-cols-2">
+                  <div>
+                    <div className="font-semibold text-black">Mines</div>
+                    <div className="text-xs text-black/50">{explodeGame.mines} hidden on the board</div>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-black">Safe cells left</div>
+                    <div className="text-xs text-black/50">{explodeGame.safeCellsRemaining} unrevealed</div>
+                  </div>
+                  <div className="sm:col-span-2 rounded-[18px] bg-orange-100/80 px-3 py-2 text-black/75">
+                    {explodeGame.message}
                   </div>
                 </div>
               </div>
@@ -289,6 +290,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 {snapshot?.players.map((player) => {
                   const isLocal = snapshot.viewer.localPlayerIds.includes(player.id);
                   const riderState = slitherGame?.riders.find((rider) => rider.id === player.id);
+                  const ramsesPlayer = ramsesGame?.players.find((entry) => entry.id === player.id);
+                  const explodePlayer = explodeGame?.players.find((entry) => entry.id === player.id);
                   return (
                     <div key={player.id} className="rounded-[20px] border border-black/10 bg-white/60 px-4 py-3 text-sm">
                       <div className="flex items-center justify-between gap-3">
@@ -320,6 +323,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                           {riderState.ghostActive ? ' · ghost active' : ''}
                         </div>
                       )}
+                      {ramsesPlayer && <div className="mt-1 text-black/55">Score: <span className="font-medium text-black">{ramsesPlayer.score}</span></div>}
+                      {explodePlayer && <div className="mt-1 text-black/55">Score: <span className="font-medium text-black">{explodePlayer.score}</span> · blasts: <span className="font-medium text-black">{explodePlayer.blasts}</span></div>}
                     </div>
                   );
                 })}
@@ -330,19 +335,18 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/42">Invite link</div>
               <div className="mt-2 flex items-start gap-2">
                 <div className="min-w-0 break-all text-sm text-black/55">{shareUrl}</div>
-                <button
-                  onClick={copyInvite}
-                  className="shrink-0 rounded-full bg-black/8 p-2 text-black/60 hover:bg-black/15 hover:text-black"
-                  title="Copy invite link"
-                >
+                <button onClick={copyInvite} className="shrink-0 rounded-full bg-black/8 p-2 text-black/60 hover:bg-black/15 hover:text-black" title="Copy invite link">
                   {copied ? <CheckIcon /> : <ClipboardIcon />}
                 </button>
               </div>
             </div>
 
-            <div className="mt-auto pt-2">
+            <div className="mt-auto flex flex-wrap gap-3 pt-2">
               <button onClick={startGame} className="rounded-full bg-black px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white hover:bg-black/84">
                 Start / restart
+              </button>
+              <button onClick={() => send('room:stopGame', {})} className="rounded-full border border-black/18 px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black hover:bg-black/8">
+                Back to lobby
               </button>
             </div>
           </div>
@@ -357,12 +361,19 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                   <li>TFGH: F / H · use powerup with T</li>
                   <li>IJKL: J / L · use powerup with I</li>
                 </ul>
-              ) : (
+              ) : snapshot?.game === 'ramses' ? (
                 <ul className="space-y-2">
                   <li>Click one of the highlighted pyramids next to the hole.</li>
                   <li>Empty coins are safe, so your turn keeps going.</li>
                   <li>The wrong treasure ends your turn right away.</li>
                   <li>The same card stays active until somebody finds it.</li>
+                </ul>
+              ) : (
+                <ul className="space-y-2">
+                  <li>Only the active player can reveal a tile.</li>
+                  <li>Safe reveals score points, and zeroes open a whole region.</li>
+                  <li>Stepping on a mine costs 2 points and passes the turn.</li>
+                  <li>Clear the board to win on points.</li>
                 </ul>
               )}
             </div>
@@ -383,20 +394,35 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                 <div className="mt-1">Current card: <span className="font-semibold capitalize text-white">{ramsesGame.currentCard?.treasure ?? '—'}</span>{ramsesGame.currentCard ? ` · ${ramsesGame.currentCard.points} pts` : ''}</div>
               </div>
             )}
+            {explodeGame && (
+              <div className="mt-4 text-sm text-white/72">
+                <div className="mb-2 text-base font-bold uppercase tracking-[0.06em] text-white">Round</div>
+                <div>Safe cells left: <span className="font-semibold text-white">{explodeGame.safeCellsRemaining}</span></div>
+                <div className="mt-1">Current turn: <span className="font-semibold text-white">{explodeGame.players.find((entry) => entry.id === explodeGame.turnPlayerId)?.name ?? '—'}</span></div>
+              </div>
+            )}
           </aside>
         </section>
       </div>
 
       {snapshot && gameIsActive && (
-        <div className={`fixed inset-0 z-50 flex flex-col ${snapshot.game === 'slither' ? 'bg-[#060606]' : 'bg-[#f2ead3]'}`}>
+        <div className={`fixed inset-0 z-50 flex flex-col ${snapshot.game === 'slither' ? 'bg-[#060606]' : snapshot.game === 'explode' ? 'bg-[#fff7ef]' : 'bg-[#f2ead3]'}`}>
           <div className={`flex items-center gap-4 px-5 py-3 ${snapshot.game === 'slither' ? 'border-b border-white/10' : 'border-b border-black/10 bg-white/70'}`}>
             <div className={`text-xs font-bold uppercase tracking-[0.14em] ${snapshot.game === 'slither' ? 'text-white/50' : 'text-black/45'}`}>
-              {snapshot.game === 'slither' ? `Round ${slitherGame?.round ?? 1}` : `Deck left ${ramsesGame?.deckRemaining ?? 0}`}
+              {snapshot.game === 'slither'
+                ? `Round ${slitherGame?.round ?? 1}`
+                : snapshot.game === 'ramses'
+                  ? `Deck left ${ramsesGame?.deckRemaining ?? 0}`
+                  : `Safe left ${explodeGame?.safeCellsRemaining ?? 0}`}
             </div>
             <div className="flex flex-1 flex-wrap gap-3">
               {snapshot.players.map((player) => {
                 const rider = slitherGame?.riders.find((r) => r.id === player.id);
-                const score = slitherGame?.scores?.[player.id] ?? ramsesGame?.players.find((entry) => entry.id === player.id)?.score ?? 0;
+                const score =
+                  slitherGame?.scores?.[player.id] ??
+                  ramsesGame?.players.find((entry) => entry.id === player.id)?.score ??
+                  explodeGame?.players.find((entry) => entry.id === player.id)?.score ??
+                  0;
                 return (
                   <div key={player.id} className={`flex items-center gap-2 rounded-full px-3 py-1 ${rider?.alive === false ? 'opacity-40' : ''}`} style={{ background: player.color + '22', border: `1px solid ${player.color}55` }}>
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: player.color }} />
@@ -404,31 +430,29 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
                     {rider?.carriedPowerup && (
                       <span className={`text-xs ${snapshot.game === 'slither' ? 'text-white/60' : 'text-black/55'}`}>{rider.ghostActive ? '👻' : rider.carriedPowerup === 'bomb' ? '💣' : '⚡'}</span>
                     )}
+                    {explodeGame?.players.find((entry) => entry.id === player.id)?.blasts ? (
+                      <span className={`text-xs ${snapshot.game === 'slither' ? 'text-white/60' : 'text-black/55'}`}>💥</span>
+                    ) : null}
                     <span className={`text-xs font-bold ${snapshot.game === 'slither' ? 'text-white/50' : 'text-black/45'}`}>{score}</span>
                   </div>
                 );
               })}
             </div>
             {slitherGame && (slitherGame.phase === 'running' || slitherGame.phase === 'countdown') && (
-              <button
-                onClick={() => send('room:pauseGame', {})}
-                className="shrink-0 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-white/20"
-              >
+              <button onClick={() => send('room:pauseGame', {})} className="shrink-0 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-white/20">
                 {slitherGame.paused ? 'Resume' : 'Pause'}
               </button>
             )}
-            {snapshot.game === 'slither' && (
-              <button
-                onClick={() => send('room:stopGame', {})}
-                className="shrink-0 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-rose-500/60 hover:border-rose-400/40"
-                title="Exit game"
-              >
-                Exit
-              </button>
-            )}
+            <button
+              onClick={() => send('room:stopGame', {})}
+              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] ${snapshot.game === 'slither' ? 'border border-white/20 bg-white/10 text-white hover:bg-rose-500/60 hover:border-rose-400/40' : 'border border-black/12 bg-black/5 text-black hover:bg-black/10'}`}
+              title="Exit game"
+            >
+              Exit
+            </button>
           </div>
 
-          <div className="relative flex-1 min-h-0">
+          <div className="relative min-h-0 flex-1">
             {snapshot.game === 'slither' ? (
               <SlitherView
                 snapshot={snapshot}
@@ -437,6 +461,8 @@ export function RoomClient({ roomId, nickname, initialGame }: { roomId: string; 
               />
             ) : snapshot.game === 'ramses' ? (
               <RamsesView snapshot={snapshot} onAction={(action: RamsesAction) => send('ramses:action', action)} />
+            ) : snapshot.game === 'explode' ? (
+              <ExplodeView snapshot={snapshot} onAction={(action: ExplodeAction) => send('explode:action', action)} />
             ) : null}
           </div>
         </div>

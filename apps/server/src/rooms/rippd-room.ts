@@ -4,6 +4,7 @@ import {
   AddLocalPlayerPayload,
   ClientRoomSnapshot,
   CreateOrJoinPayload,
+  ExplodeAction,
   GameKind,
   PLAYER_COLORS,
   PlayerSeat,
@@ -15,17 +16,23 @@ import {
 import { config } from '../config';
 import { recordRoomEvent } from '../db';
 import {
+  InternalExplodeGame,
   InternalRamsesGame,
   InternalSlitherGame,
   applySlitherInput,
   applySlitherSettings,
+  buildExplodeSnapshot,
   buildRamsesSnapshot,
   buildSlitherSnapshot,
+  createExplodeGame,
   createRamsesGame,
   createSlitherGame,
+  currentExplodePlayerId,
   currentRamsesPlayerId,
+  handleExplodeAction,
   handleRamsesAction,
   maybeRestartSlither,
+  startExplode,
   startRamses,
   startSlither,
   syncLobbyRiders,
@@ -43,12 +50,17 @@ export class RippdRoom extends Room {
   private players: PlayerSeat[] = [];
   private sessionLocalPlayers = new Map<string, string[]>();
   private sessionToSocket = new Map<string, string>();
-  private gameState: InternalSlitherGame | InternalRamsesGame = createSlitherGame();
+  private gameState: InternalSlitherGame | InternalRamsesGame | InternalExplodeGame = createSlitherGame();
 
   async onCreate(options: { roomCode: string; game: GameKind }) {
     this.roomCode = String(options.roomCode || '').toUpperCase();
     this.game = options.game ?? 'slither';
-    this.gameState = this.game === 'slither' ? createSlitherGame() : createRamsesGame([]);
+    this.gameState =
+      this.game === 'slither'
+        ? createSlitherGame()
+        : this.game === 'ramses'
+          ? createRamsesGame([])
+          : createExplodeGame([]);
 
     await this.setMetadata({ roomCode: this.roomCode, game: this.game });
     this.onMessage('room:addLocalPlayer', async (client, payload: AddLocalPlayerPayload) => {
@@ -63,8 +75,10 @@ export class RippdRoom extends Room {
       }
       if (this.game === 'slither' && this.gameState.type === 'slither') {
         startSlither(this.roomCode, this.gameState, this.players);
-      } else {
+      } else if (this.game === 'ramses') {
         this.gameState = startRamses(this.roomCode, this.players);
+      } else {
+        this.gameState = startExplode(this.roomCode, this.players);
       }
       this.broadcastSnapshot();
     });
@@ -83,9 +97,14 @@ export class RippdRoom extends Room {
     });
 
     this.onMessage('room:stopGame', () => {
-      if (this.game !== 'slither' || this.gameState.type !== 'slither') return;
-      this.gameState.phase = 'lobby';
-      this.gameState.paused = false;
+      if (this.game === 'slither' && this.gameState.type === 'slither') {
+        this.gameState.phase = 'lobby';
+        this.gameState.paused = false;
+      } else if (this.game === 'ramses') {
+        this.gameState = createRamsesGame(this.players);
+      } else {
+        this.gameState = createExplodeGame(this.players);
+      }
       this.broadcastSnapshot();
     });
 
@@ -100,6 +119,9 @@ export class RippdRoom extends Room {
       if (this.gameState.type === 'slither') {
         const rider = this.gameState.riders.find((r) => r.id === payload.playerId);
         if (rider) rider.name = name;
+      } else if (this.gameState.type === 'ramses' || this.gameState.type === 'explode') {
+        const gamePlayer = this.gameState.players.find((entry) => entry.id === payload.playerId);
+        if (gamePlayer) gamePlayer.name = name;
       }
       this.broadcastSnapshot();
     });
@@ -124,6 +146,15 @@ export class RippdRoom extends Room {
       const ownsCurrentPlayer = (this.sessionLocalPlayers.get(client.sessionId) ?? []).includes(currentId);
       if (!ownsCurrentPlayer || !currentId) return;
       const changed = await handleRamsesAction(this.roomCode, this.gameState, currentId, payload, this.players.length);
+      if (changed) this.broadcastSnapshot();
+    });
+
+    this.onMessage('explode:action', async (client, payload: ExplodeAction) => {
+      if (this.game !== 'explode' || this.gameState.type !== 'explode') return;
+      const currentId = currentExplodePlayerId(this.gameState);
+      const ownsCurrentPlayer = (this.sessionLocalPlayers.get(client.sessionId) ?? []).includes(currentId);
+      if (!ownsCurrentPlayer || !currentId) return;
+      const changed = await handleExplodeAction(this.roomCode, this.gameState, currentId, payload, this.players.length);
       if (changed) this.broadcastSnapshot();
     });
 
@@ -199,6 +230,8 @@ export class RippdRoom extends Room {
       syncLobbyRiders(this.gameState, this.players);
     } else if (this.game === 'ramses') {
       this.gameState = createRamsesGame(this.players);
+    } else {
+      this.gameState = createExplodeGame(this.players);
     }
 
     await recordRoomEvent({ roomId: this.roomCode, gameKind: this.game, eventType: 'local_player_added', payload: { playerId: player.id, name: player.name } });
@@ -222,8 +255,10 @@ export class RippdRoom extends Room {
       this.gameState = createSlitherGame();
       syncLobbyRiders(this.gameState, this.players);
       if (this.players.length >= 2) startSlither(this.roomCode, this.gameState, this.players);
-    } else {
+    } else if (this.game === 'ramses') {
       this.gameState = createRamsesGame(this.players);
+    } else {
+      this.gameState = createExplodeGame(this.players);
     }
 
     await recordRoomEvent({ roomId: this.roomCode, gameKind: this.game, eventType: 'session_removed', payload: { sessionId } });
@@ -243,7 +278,12 @@ export class RippdRoom extends Room {
         socketId: this.sessionToSocket.get(sessionId) ?? '',
         localPlayerIds: this.sessionLocalPlayers.get(sessionId) ?? []
       },
-      gameState: this.gameState.type === 'slither' ? buildSlitherSnapshot(this.gameState) : buildRamsesSnapshot(this.gameState)
+      gameState:
+        this.gameState.type === 'slither'
+          ? buildSlitherSnapshot(this.gameState)
+          : this.gameState.type === 'ramses'
+            ? buildRamsesSnapshot(this.gameState)
+            : buildExplodeSnapshot(this.gameState)
     };
   }
 

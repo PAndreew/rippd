@@ -51,9 +51,7 @@ function buildCoins(rows: number, cols: number, hole: { x: number; y: number }) 
   const positions: { x: number; y: number }[] = [];
 
   for (let y = 0; y < rows; y += 1) {
-    for (let x = 0; x < cols; x += 1) {
-      positions.push({ x, y });
-    }
+    for (let x = 0; x < cols; x += 1) positions.push({ x, y });
   }
 
   const treasurePositions = shuffle(positions.filter((position) => position.x !== hole.x || position.y !== hole.y)).slice(0, TREASURE_KINDS.length);
@@ -61,8 +59,8 @@ function buildCoins(rows: number, cols: number, hole: { x: number; y: number }) 
 
   for (let y = 0; y < rows; y += 1) {
     for (let x = 0; x < cols; x += 1) {
-      const key = `${x},${y}`;
-      const hiddenCoin = treasureMap.get(key) ?? 'empty';
+      const k = `${x},${y}`;
+      const hiddenCoin = treasureMap.get(k) ?? 'empty';
       const isHole = x === hole.x && y === hole.y;
       cells.push({
         x,
@@ -113,12 +111,10 @@ function updateRoundState(game: InternalRamsesGame) {
     game.winnerIds = game.players.filter((player) => player.score === highScore).map((player) => player.id);
     game.phase = 'round-over';
     game.movable = [];
-    if (game.winnerIds.length > 1) {
-      game.message = `Deck finished. It's a tie on ${highScore} points.`;
-    } else {
-      const winner = game.players.find((player) => player.id === game.winnerIds[0]);
-      game.message = winner ? `${winner.name} wins with ${winner.score} points.` : 'Deck finished.';
-    }
+    game.message =
+      game.winnerIds.length > 1
+        ? `Deck finished. It's a tie on ${highScore} points.`
+        : `${game.players.find((player) => player.id === game.winnerIds[0])?.name ?? 'Winner'} wins with ${highScore} points.`;
   }
 }
 
@@ -132,22 +128,17 @@ export function createRamsesGame(players: PlayerSeat[]): InternalRamsesGame {
     type: 'ramses',
     rows,
     cols,
-    phase: players.length ? 'playing' : 'lobby',
+    phase: 'lobby',
     cells: buildCoins(rows, cols, hole),
-    players: players.map((player) => ({
-      id: player.id,
-      name: player.name,
-      score: 0
-    })),
+    players: players.map((player) => ({ id: player.id, name: player.name, score: 0 })),
     turnIndex: 0,
     hole,
     currentCard: deck[0],
     deck,
     deckIndex: 0,
     movable: [],
-    message: 'Slide a pyramid into the hole. Empty coins are safe, the wrong treasure ends your turn, and the matching treasure wins the card.',
-    winnerIds: [],
-    startedAt: Date.now()
+    message: 'Press start, then slide a pyramid into the hole. Empty coins are safe, the wrong treasure ends your turn, and the matching treasure wins the card.',
+    winnerIds: []
   };
 
   updateRoundState(game);
@@ -221,6 +212,10 @@ export async function handleRamsesAction(roomCode: string, game: InternalRamsesG
 
 export function startRamses(roomCode: string, players: PlayerSeat[]) {
   const game = createRamsesGame(players);
+  game.phase = 'playing';
+  game.startedAt = Date.now();
+  game.message = 'Slide a pyramid into the hole. Empty coins are safe, the wrong treasure ends your turn, and the matching treasure wins the card.';
+  updateRoundState(game);
   void recordRoomEvent({ roomId: roomCode, gameKind: 'ramses', eventType: 'match_started', payload: { players: players.length } });
   return game;
 }

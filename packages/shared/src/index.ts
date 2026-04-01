@@ -1,4 +1,4 @@
-export type GameKind = 'slither' | 'ramses';
+export type GameKind = 'slither' | 'ramses' | 'explode';
 export type ControlPreset = 'arrows' | 'wasd' | 'tfgh' | 'ijkl';
 
 export const GAME_CONFIG = {
@@ -13,6 +13,12 @@ export const GAME_CONFIG = {
     name: 'Treasure Hunt',
     tagline: 'Card-driven treasure race',
     description: 'Pull treasure cards, slide pyramids around a single hole, and reach the matching treasure without stumbling onto the wrong one.'
+  },
+  explode: {
+    kind: 'explode' as const,
+    name: 'Explode',
+    tagline: 'Competitive minesweeper',
+    description: 'Take turns clearing a live minefield, chain open safe zones, and outscore your rivals without blowing yourself up.'
   }
 };
 
@@ -51,6 +57,17 @@ export const GAME_THEME: Record<
     badgeClasses: ['Board game', 'Strategy', 'Multiplayer'],
     emoji: '🔺',
     badgeLabel: 'Puzzle'
+  },
+  explode: {
+    surface: '#fff7ed',
+    surfaceMuted: '#fde7d2',
+    contrastSurface: '#08111f',
+    contrastText: '#fff7ed',
+    accent: '#f97316',
+    accentSoft: 'rgba(249, 115, 22, 0.18)',
+    badgeClasses: ['Puzzle', 'Competitive', 'Multiplayer'],
+    emoji: '💥',
+    badgeLabel: 'Mind game'
   }
 };
 
@@ -111,6 +128,7 @@ export type SlitherUsePowerupInput = {
 };
 
 export type RamsesAction = { type: 'slide'; x: number; y: number };
+export type ExplodeAction = { type: 'reveal'; x: number; y: number };
 
 export type SlitherRiderState = {
   id: string;
@@ -185,13 +203,44 @@ export type RamsesSnapshot = {
   winnerIds: string[];
 };
 
+export type ExplodeCell = {
+  x: number;
+  y: number;
+  revealed: boolean;
+  adjacent?: number;
+  mine: boolean;
+  exploded: boolean;
+  ownerId?: string;
+};
+
+export type ExplodePlayer = {
+  id: string;
+  name: string;
+  score: number;
+  blasts: number;
+};
+
+export type ExplodeSnapshot = {
+  type: 'explode';
+  rows: number;
+  cols: number;
+  mines: number;
+  phase: 'lobby' | 'playing' | 'round-over';
+  turnPlayerId: string;
+  cells: ExplodeCell[];
+  players: ExplodePlayer[];
+  safeCellsRemaining: number;
+  message: string;
+  winnerIds: string[];
+};
+
 export type ClientRoomSnapshot = {
   roomId: string;
   game: GameKind;
   players: PlayerSeat[];
   hostSocketId: string;
   viewer: ViewerState;
-  gameState: SlitherSnapshot | RamsesSnapshot;
+  gameState: SlitherSnapshot | RamsesSnapshot | ExplodeSnapshot;
 };
 
 export type ServerToClientEvents = {
@@ -207,6 +256,7 @@ export type SocketMessageMap = {
   'slither:input': SlitherControlInput;
   'slither:usePowerup': SlitherUsePowerupInput;
   'ramses:action': RamsesAction;
+  'explode:action': ExplodeAction;
 };
 
 export const PLAYER_COLORS = ['#60a5fa', '#f97316', '#a78bfa', '#34d399', '#f43f5e', '#facc15'];

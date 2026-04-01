@@ -471,14 +471,27 @@ function Hero() {
   return (
     <section className="zen-section pt-6 sm:pt-8 lg:pt-10">
       <div className="shell-width">
-        <div className="pb-2">
-          <div className="eyebrow">Instant multiplayer · optional accounts</div>
-          <div className="mt-8 zen-display-title text-[clamp(4.8rem,13vw,10.5rem)]">
-            <span>Lets play</span>
+        <div className="grid items-center gap-8 pb-2 lg:grid-cols-[1fr_auto]">
+          <div>
+            <div className="eyebrow">Instant multiplayer · optional accounts</div>
+            <div className="mt-8 zen-display-title text-[clamp(4.8rem,13vw,10.5rem)]">
+              <span>Lets play</span>
+            </div>
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-black/68 sm:text-lg">
+              Digital remakes of classic board games and digital games, playable instantly with friends.
+            </p>
           </div>
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-black/68 sm:text-lg">
-            Digital remakes of classic board games and digital games, playable instantly with friends.
-          </p>
+          <div className="hidden lg:flex items-center justify-end pr-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/mascot.svg"
+              alt="Rippd mascot"
+              width={180}
+              height={145}
+              style={{ transform: 'scaleX(-1)' }}
+              className="select-none"
+            />
+          </div>
         </div>
       </div>
     </section>
